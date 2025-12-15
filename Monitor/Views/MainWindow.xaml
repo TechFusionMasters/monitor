@@ -1,0 +1,142 @@
+<Window x:Class="SystemActivityTracker.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="System Activity Tracker" Height="300" Width="500">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="{Binding TodayText}"
+                   FontSize="18"
+                   FontWeight="SemiBold" />
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,12,0,0"
+                   Text="{Binding TrackingStatus}"
+                   FontSize="14" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left" >
+            <Button Content="Start Tracking"
+                    Width="120"
+                    Margin="0,0,8,0"
+                    Command="{Binding StartCommand}" />
+            <Button Content="Stop Tracking"
+                    Width="120"
+                    Command="{Binding StopCommand}" />
+            <Button Content="Refresh Summary"
+                    Width="130"
+                    Margin="8,0,0,0"
+                    Command="{Binding RefreshCommand}" />
+            <Button Content="Force Write Now"
+                    Width="130"
+                    Margin="5,0,0,0"
+                    Command="{Binding ForceWriteNowCommand}"
+                    IsEnabled="{Binding IsTestMode}" />
+
+            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="Idle (min):" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <TextBox Width="40" Text="{Binding IdleThresholdMinutes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+                <TextBlock Text="Poll (s):" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <TextBox Width="40" Text="{Binding PollIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+
+                <CheckBox Content="Enable live refresh"
+                          IsChecked="{Binding EnableLiveRefresh, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          Margin="12,0,0,0" />
+
+                <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Live refresh (s):" VerticalAlignment="Center" Margin="0,0,4,0" />
+                    <TextBox Width="60" Text="{Binding LiveRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+
+                <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="12,0,0,0" />
+
+                <CheckBox Content="Test mode"
+                          Margin="10,0,0,0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding IsTestMode, Mode=TwoWay}" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Margin="0,20,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <TextBlock Text="Selected date:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <TextBlock Text="Selected day summary" FontWeight="SemiBold" />
+            <StackPanel Margin="0,4,0,0">
+                <TextBlock Text="{Binding SelectedDayActiveText}"
+                           FontSize="14"
+                           Margin="0,2,0,2" />
+                <TextBlock Text="{Binding SelectedDayIdleText}"
+                           FontSize="14"
+                           Margin="0,2,0,2" />
+                <TextBlock Text="{Binding SelectedDayLockedText}"
+                           FontSize="14"
+                           Margin="0,2,0,2" />
+            </StackPanel>
+
+            <TextBlock Text="Selected day by App" FontWeight="SemiBold" Margin="0,10,0,4" />
+            <DataGrid ItemsSource="{Binding TodayAppUsage}"
+                      AutoGenerateColumns="False"
+                      HeadersVisibility="Column"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      Margin="0,4,0,0"
+                      Height="140">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="App / Process" Binding="{Binding ProcessName}" Width="*" />
+                    <DataGridTextColumn Header="Active Time (hh:mm)"
+                                        Binding="{Binding ActiveDurationText, Mode=OneWay}"
+                                        Width="150" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Text="Weekly overview" FontWeight="SemiBold" Margin="0,14,0,4" />
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock Text="Week start:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <DatePicker SelectedDate="{Binding WeekStartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Content="Load Weekly" Command="{Binding LoadWeeklyCommand}" Margin="8,0,0,0" />
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding WeeklySummaries}"
+                      AutoGenerateColumns="False"
+                      HeadersVisibility="Column"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      Margin="0,0,0,0"
+                      Height="160">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Date"
+                                        Binding="{Binding Date, Mode=OneWay, StringFormat={}{0:dd-MMM-yyyy}}"
+                                        Width="*" />
+                    <DataGridTextColumn Header="Active (hh:mm)"
+                                        Binding="{Binding ActiveDurationText, Mode=OneWay}"
+                                        Width="110" />
+                    <DataGridTextColumn Header="Idle (hh:mm)"
+                                        Binding="{Binding IdleDurationText, Mode=OneWay}"
+                                        Width="110" />
+                    <DataGridTextColumn Header="Locked (hh:mm)"
+                                        Binding="{Binding LockedDurationText, Mode=OneWay}"
+                                        Width="110" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Margin="0,5,0,0">
+                <TextBlock Text="{Binding WeeklyTotalActiveText}" />
+                <TextBlock Text="{Binding WeeklyTotalIdleText}" />
+                <TextBlock Text="{Binding WeeklyTotalLockedText}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
