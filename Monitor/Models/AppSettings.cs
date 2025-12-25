@@ -6,5 +6,6 @@ namespace SystemActivityTracker.Models
         public int PollIntervalSeconds { get; set; } = 5;
         public bool EnableLiveRefresh { get; set; } = true;
         public int LiveRefreshIntervalSeconds { get; set; } = 30;
+        public bool AutoStartTrackingOnLaunch { get; set; } = true;
     }
 }

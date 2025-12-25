@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using SystemActivityTracker.Models;
 using SystemActivityTracker.Services;
+using SystemActivityTracker.Utilities;
 
 namespace SystemActivityTracker.ViewModels
 {
@@ -41,19 +42,9 @@ namespace SystemActivityTracker.ViewModels
             _settingsService = settingsService;
             TodayText = DateTime.Now.ToString("dddd, dd MMMM yyyy");
             _weekStartDate = StartOfWeek(DateTime.Today, DayOfWeek.Monday);
-            StartCommand = new RelayCommand(_ =>
-            {
-                _trackingService?.Start();
-                TrackingStatus = "Tracking status: Running";
-                ApplyLiveRefreshSettings();
-            });
+            StartCommand = new RelayCommand(_ => StartTracking());
 
-            StopCommand = new RelayCommand(_ =>
-            {
-                _trackingService?.Stop();
-                TrackingStatus = "Tracking status: Stopped";
-                _autoRefreshTimer.Stop();
-            });
+            StopCommand = new RelayCommand(_ => StopTracking());
 
             RefreshCommand = new RelayCommand(_ => RefreshTodaySummary());
 
@@ -88,7 +79,48 @@ namespace SystemActivityTracker.ViewModels
             EnableLiveRefresh = settings.EnableLiveRefresh;
             LiveRefreshIntervalSeconds = settings.LiveRefreshIntervalSeconds;
 
+            if (settings.AutoStartTrackingOnLaunch)
+            {
+                StartTracking();
+            }
+
             LoadWeeklySummary();
+        }
+
+        private void StartTracking()
+        {
+            if (_trackingService == null)
+            {
+                return;
+            }
+
+            if (_trackingService.IsRunning)
+            {
+                return;
+            }
+
+            _trackingService.Start();
+            TrackingStatus = "Tracking status: Running";
+            ApplyLiveRefreshSettings();
+        }
+
+        private void StopTracking()
+        {
+            if (_trackingService == null)
+            {
+                return;
+            }
+
+            if (!_trackingService.IsRunning)
+            {
+                TrackingStatus = "Tracking status: Stopped";
+                _autoRefreshTimer.Stop();
+                return;
+            }
+
+            _trackingService.Stop();
+            TrackingStatus = "Tracking status: Stopped";
+            _autoRefreshTimer.Stop();
         }
 
         public string TodayText { get; }
@@ -260,9 +292,9 @@ namespace SystemActivityTracker.ViewModels
         public string TotalIdleTimeTodayDisplay => FormatTimeSpan(TotalIdleTimeToday);
         public string TotalLockedTimeTodayDisplay => FormatTimeSpan(TotalLockedTimeToday);
 
-        public string SelectedDayActiveText  => $"Active: {TotalActiveTimeToday:hh\\:mm}";
-        public string SelectedDayIdleText    => $"Idle: {TotalIdleTimeToday:hh\\:mm}";
-        public string SelectedDayLockedText  => $"Locked: {TotalLockedTimeToday:hh\\:mm}";
+        public string SelectedDayActiveText  => $"Active: {TotalActiveTimeToday.ToHoursMinutes()}";
+        public string SelectedDayIdleText    => $"Idle: {TotalIdleTimeToday.ToHoursMinutes()}";
+        public string SelectedDayLockedText  => $"Locked: {TotalLockedTimeToday.ToHoursMinutes()}";
 
         public TimeSpan WeeklyTotalActiveDuration
         {
@@ -306,9 +338,9 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        public string WeeklyTotalActiveText  => $"Total Active: {WeeklyTotalActiveDuration:hh\\:mm}";
-        public string WeeklyTotalIdleText    => $"Total Idle: {WeeklyTotalIdleDuration:hh\\:mm}";
-        public string WeeklyTotalLockedText  => $"Total Locked: {WeeklyTotalLockedDuration:hh\\:mm}";
+        public string WeeklyTotalActiveText  => $"Total Active: {WeeklyTotalActiveDuration.ToHoursMinutes()}";
+        public string WeeklyTotalIdleText    => $"Total Idle: {WeeklyTotalIdleDuration.ToHoursMinutes()}";
+        public string WeeklyTotalLockedText  => $"Total Locked: {WeeklyTotalLockedDuration.ToHoursMinutes()}";
 
         private void SaveSettings()
         {

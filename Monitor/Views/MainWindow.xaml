@@ -4,139 +4,398 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="System Activity Tracker" Height="300" Width="500">
-    <Grid Margin="16">
+        Title="System Activity Tracker" 
+        Height="900" Width="1200" 
+        MinHeight="600" MinWidth="800"
+        Background="{StaticResource BackgroundBrush}">
+    
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="{Binding TodayText}"
-                   FontSize="18"
-                   FontWeight="SemiBold" />
+        <!-- Compact Header -->
+        <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
+                Padding="16,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="System Activity Tracker" Style="{StaticResource SubHeaderTextStyle}" VerticalAlignment="Center"/>
+                <TextBlock Text="• Track active, idle, and locked time" Style="{StaticResource SecondaryTextStyle}" 
+                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+        </Border>
 
-        <TextBlock Grid.Row="1"
-                   Margin="0,12,0,0"
-                   Text="{Binding TrackingStatus}"
-                   FontSize="14" />
+        <!-- Main Content - 2 Column Layout -->
+        <Grid Grid.Row="1" Margin="16,12,16,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="Auto" MaxWidth="360"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Left Column: Primary Data -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Combined Summary Card -->
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Text="Summary" Style="{StaticResource SectionHeaderTextStyle}" 
+                                       VerticalAlignment="Center" Margin="0,0,0,0"/>
+                            
+                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <TextBlock Text="Date:" Style="{StaticResource BodyTextStyle}" 
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <!-- Combined Day + Week Summary -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Selected Day -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Selected Day" Style="{StaticResource SubHeaderTextStyle}" 
+                                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
+                                        <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedDayActiveText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="1" Margin="0,0,0,6">
+                                        <TextBlock Text="Idle" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedDayIdleText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="2">
+                                        <TextBlock Text="Locked" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedDayLockedText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Separator -->
+                            <Border Grid.Column="1" Background="{StaticResource BorderBrush}" Width="1" Margin="9,0,10,0"/>
+                            
+                            <!-- This Week -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="This Week" Style="{StaticResource SubHeaderTextStyle}" 
+                                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
+                                        <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding WeeklyTotalActiveText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="1" Margin="0,0,0,6">
+                                        <TextBlock Text="Idle" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="2">
+                                        <TextBlock Text="Locked" Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding WeeklyTotalLockedText}" Style="{StaticResource LargeNumberTextStyle}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Selected Day by Application Card -->
+                <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Application Usage" Style="{StaticResource SectionHeaderTextStyle}"/>
+                        
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding TodayAppUsage}" Style="{StaticResource ModernDataGridStyle}"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeaderStyle}"/>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRowStyle}"/>
+                            </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCellStyle}"/>
+                            </DataGrid.CellStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="App / Process" Binding="{Binding ProcessName}" Width="2*"/>
+                                <DataGridTextColumn Header="Active Time" Binding="{Binding ActiveDurationText, Mode=OneWay}" Width="1*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+                
+                <!-- Weekly Overview Header -->
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Text="Weekly Overview" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"/>
+                        
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <TextBlock Text="Week start:" Style="{StaticResource BodyTextStyle}" 
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <DatePicker SelectedDate="{Binding WeekStartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                        Margin="0,0,8,0"/>
+                            <Button Content="Load" Style="{StaticResource SecondaryButtonStyle}" 
+                                    Command="{Binding LoadWeeklyCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                
+                <!-- Weekly Overview DataGrid -->
+                <Border Grid.Row="3" Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <DataGrid ItemsSource="{Binding WeeklySummaries}" Style="{StaticResource ModernDataGridStyle}"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeaderStyle}"/>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRowStyle}"/>
+                            </DataGrid.RowStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCellStyle}"/>
+                            </DataGrid.CellStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Date" Binding="{Binding Date, Mode=OneWay, StringFormat={}{0:dd-MMM-yyyy}}" Width="1*"/>
+                                <DataGridTextColumn Header="Active" Binding="{Binding ActiveDurationText, Mode=OneWay}" Width="1*"/>
+                                <DataGridTextColumn Header="Idle" Binding="{Binding IdleDurationText, Mode=OneWay}" Width="1*"/>
+                                <DataGridTextColumn Header="Locked" Binding="{Binding LockedDurationText, Mode=OneWay}" Width="1*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
+            
+            <!-- Right Column: Controls & Settings -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    
+                    <!-- Controls Card -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="Controls" Style="{StaticResource SectionHeaderTextStyle}"/>
+                            
+                            <!-- Tracking Status -->
+                            <Border Background="{StaticResource HeaderBackgroundBrush}" 
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" 
+                                    CornerRadius="4" Padding="10" Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Ellipse>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse" BasedOn="{StaticResource LargeStatusIndicatorStyle}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                                        <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                                <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                        <Setter Property="Text" Value="Running"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                                        <Setter Property="Text" Value="Stopped"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                                <Setter Property="Text" Value="Unknown"/>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Action Buttons -->
+                            <StackPanel Margin="0,0,0,12">
+                                <!-- Start Button (Primary when stopped) -->
+                                <Button Content="Start Tracking" Margin="0,0,0,6" HorizontalAlignment="Stretch"
+                                        Command="{Binding StartCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                
+                                <!-- Stop Button (Danger when running) -->
+                                <Button Content="Stop Tracking" Margin="0,0,0,6" HorizontalAlignment="Stretch"
+                                        Command="{Binding StopCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <Setter Property="Background" Value="#DC2626"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                
+                                <Button Content="Refresh Summary" Style="{StaticResource SecondaryButtonStyle}" 
+                                        Command="{Binding RefreshCommand}" Margin="0,0,0,6" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                            
+                            <!-- Test Mode Section -->
+                            <Border Style="{StaticResource TestModeCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Developer / Test" Style="{StaticResource BodyTextStyle}" 
+                                               FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Test mode" Style="{StaticResource ModernCheckBoxStyle}" 
+                                              IsChecked="{Binding IsTestMode, Mode=TwoWay}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Enables Force Write Now button" Style="{StaticResource SecondaryTextStyle}" 
+                                               FontSize="11" Margin="0,0,0,8"/>
+                                    <Button Content="Force Write Now" Style="{StaticResource SecondaryButtonStyle}" 
+                                            Command="{Binding ForceWriteNowCommand}" IsEnabled="{Binding IsTestMode}" 
+                                            HorizontalAlignment="Stretch"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,20,0,0" HorizontalAlignment="Left" >
-            <Button Content="Start Tracking"
-                    Width="120"
-                    Margin="0,0,8,0"
-                    Command="{Binding StartCommand}" />
-            <Button Content="Stop Tracking"
-                    Width="120"
-                    Command="{Binding StopCommand}" />
-            <Button Content="Refresh Summary"
-                    Width="130"
-                    Margin="8,0,0,0"
-                    Command="{Binding RefreshCommand}" />
-            <Button Content="Force Write Now"
-                    Width="130"
-                    Margin="5,0,0,0"
-                    Command="{Binding ForceWriteNowCommand}"
-                    IsEnabled="{Binding IsTestMode}" />
-
-            <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
-                <TextBlock Text="Idle (min):" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <TextBox Width="40" Text="{Binding IdleThresholdMinutes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
-                <TextBlock Text="Poll (s):" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <TextBox Width="40" Text="{Binding PollIntervalSeconds, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
-
-                <CheckBox Content="Enable live refresh"
-                          IsChecked="{Binding EnableLiveRefresh, Mode=TwoWay}"
-                          VerticalAlignment="Center"
-                          Margin="12,0,0,0" />
-
-                <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="Live refresh (s):" VerticalAlignment="Center" Margin="0,0,4,0" />
-                    <TextBox Width="60" Text="{Binding LiveRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <!-- Settings Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Settings" Style="{StaticResource SectionHeaderTextStyle}"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Text="Idle (min):" Style="{StaticResource BodyTextStyle}" 
+                                           VerticalAlignment="Center" Margin="0,0,8,0" Width="80"/>
+                                <TextBox Grid.Column="1" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,6"
+                                         Text="{Binding IdleThresholdMinutes, UpdateSourceTrigger=PropertyChanged}"/>
+                                
+                                <TextBlock Grid.Row="1" Text="Poll (sec):" Style="{StaticResource BodyTextStyle}" 
+                                           VerticalAlignment="Center" Margin="0,0,8,0" Width="80"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,6"
+                                         Text="{Binding PollIntervalSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                                
+                                <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Content="Enable live refresh" 
+                                          Style="{StaticResource ModernCheckBoxStyle}" Margin="0,0,0,6"
+                                          IsChecked="{Binding EnableLiveRefresh, Mode=TwoWay}"/>
+                                
+                                <TextBlock Grid.Row="3" Text="Refresh (sec):" Style="{StaticResource BodyTextStyle}" 
+                                           VerticalAlignment="Center" Margin="0,0,8,0" Width="80"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,12"
+                                         Text="{Binding LiveRefreshIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                
+                                <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Save Settings" 
+                                        Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch"
+                                        Command="{Binding SaveSettingsCommand}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
                 </StackPanel>
+            </ScrollViewer>
+        </Grid>
 
-                <Button Content="Save Settings" Command="{Binding SaveSettingsCommand}" Margin="12,0,0,0" />
-
-                <CheckBox Content="Test mode"
-                          Margin="10,0,0,0"
-                          VerticalAlignment="Center"
-                          IsChecked="{Binding IsTestMode, Mode=TwoWay}" />
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" 
+                Padding="24,12">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse>
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                    <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                    <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Text="{Binding TrackingStatus}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TodayText}" Style="{StaticResource SecondaryTextStyle}" 
+                           VerticalAlignment="Center" Margin="24,0,0,0"/>
             </StackPanel>
-        </StackPanel>
-
-        <StackPanel Grid.Row="3" Margin="0,20,0,0">
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                <TextBlock Text="Selected date:" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
-
-            <TextBlock Text="Selected day summary" FontWeight="SemiBold" />
-            <StackPanel Margin="0,4,0,0">
-                <TextBlock Text="{Binding SelectedDayActiveText}"
-                           FontSize="14"
-                           Margin="0,2,0,2" />
-                <TextBlock Text="{Binding SelectedDayIdleText}"
-                           FontSize="14"
-                           Margin="0,2,0,2" />
-                <TextBlock Text="{Binding SelectedDayLockedText}"
-                           FontSize="14"
-                           Margin="0,2,0,2" />
-            </StackPanel>
-
-            <TextBlock Text="Selected day by App" FontWeight="SemiBold" Margin="0,10,0,4" />
-            <DataGrid ItemsSource="{Binding TodayAppUsage}"
-                      AutoGenerateColumns="False"
-                      HeadersVisibility="Column"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      IsReadOnly="True"
-                      Margin="0,4,0,0"
-                      Height="140">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="App / Process" Binding="{Binding ProcessName}" Width="*" />
-                    <DataGridTextColumn Header="Active Time (hh:mm)"
-                                        Binding="{Binding ActiveDurationText, Mode=OneWay}"
-                                        Width="150" />
-                </DataGrid.Columns>
-            </DataGrid>
-
-            <TextBlock Text="Weekly overview" FontWeight="SemiBold" Margin="0,14,0,4" />
-
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock Text="Week start:" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <DatePicker SelectedDate="{Binding WeekStartDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <Button Content="Load Weekly" Command="{Binding LoadWeeklyCommand}" Margin="8,0,0,0" />
-            </StackPanel>
-
-            <DataGrid ItemsSource="{Binding WeeklySummaries}"
-                      AutoGenerateColumns="False"
-                      HeadersVisibility="Column"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      IsReadOnly="True"
-                      Margin="0,0,0,0"
-                      Height="160">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Date"
-                                        Binding="{Binding Date, Mode=OneWay, StringFormat={}{0:dd-MMM-yyyy}}"
-                                        Width="*" />
-                    <DataGridTextColumn Header="Active (hh:mm)"
-                                        Binding="{Binding ActiveDurationText, Mode=OneWay}"
-                                        Width="110" />
-                    <DataGridTextColumn Header="Idle (hh:mm)"
-                                        Binding="{Binding IdleDurationText, Mode=OneWay}"
-                                        Width="110" />
-                    <DataGridTextColumn Header="Locked (hh:mm)"
-                                        Binding="{Binding LockedDurationText, Mode=OneWay}"
-                                        Width="110" />
-                </DataGrid.Columns>
-            </DataGrid>
-            <StackPanel Margin="0,5,0,0">
-                <TextBlock Text="{Binding WeeklyTotalActiveText}" />
-                <TextBlock Text="{Binding WeeklyTotalIdleText}" />
-                <TextBlock Text="{Binding WeeklyTotalLockedText}" />
-            </StackPanel>
-        </StackPanel>
+        </Border>
+        
     </Grid>
 </Window>
