@@ -1,11 +1,10 @@
 using System.ComponentModel;
 using System.Windows;
 using SystemActivityTracker.ViewModels;
-using Wpf.Ui.Controls;
 
 namespace SystemActivityTracker.Views
 {
-    public partial class MainWindow : FluentWindow
+    public partial class MainWindow : Window
     {
         public MainWindow()
         {
