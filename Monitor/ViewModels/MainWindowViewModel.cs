@@ -28,11 +28,16 @@ namespace SystemActivityTracker.ViewModels
         private int _liveRefreshIntervalSeconds;
         private bool _isTestMode;
         private DateTime _selectedDate = DateTime.Today;
+        private DateTime _selectedMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         private DateTime _weekStartDate;
         private readonly ObservableCollection<DailySummary> _weeklySummaries = new ObservableCollection<DailySummary>();
+        private readonly ObservableCollection<MonthlyAppUsageDto> _monthlyAppUsage = new ObservableCollection<MonthlyAppUsageDto>();
+        private bool _isMonthlyUsageEmpty = true;
         private TimeSpan _weeklyTotalActiveDuration;
         private TimeSpan _weeklyTotalIdleDuration;
         private TimeSpan _weeklyTotalLockedDuration;
+        private DateTime? _selectedDayStartTime;
+        private DateTime? _selectedDayEndTime;
         private readonly DispatcherTimer _autoRefreshTimer = new DispatcherTimer();
         private AppSettings _settingsSnapshot = new AppSettings();
 
@@ -47,6 +52,8 @@ namespace SystemActivityTracker.ViewModels
             StopCommand = new RelayCommand(_ => StopTracking());
 
             RefreshCommand = new RelayCommand(_ => RefreshForSelectedDate());
+
+            LoadMonthlyUsageCommand = new RelayCommand(_ => LoadMonthlyUsage());
 
             SaveSettingsCommand = new RelayCommand(_ => SaveSettings());
             LoadWeeklyCommand = new RelayCommand(_ => LoadWeeklySummary());
@@ -85,6 +92,8 @@ namespace SystemActivityTracker.ViewModels
             }
 
             LoadWeeklySummary();
+
+            LoadMonthlyUsage();
 
             RefreshForSelectedDate();
         }
@@ -140,6 +149,24 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
+        public DateTime SelectedMonth
+        {
+            get => _selectedMonth;
+            set
+            {
+                var normalized = value == default
+                    ? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1)
+                    : new DateTime(value.Year, value.Month, 1);
+
+                if (_selectedMonth != normalized)
+                {
+                    _selectedMonth = normalized;
+                    OnPropertyChanged();
+                    LoadMonthlyUsage();
+                }
+            }
+        }
+
         public bool IsTestMode
         {
             get => _isTestMode;
@@ -158,10 +185,25 @@ namespace SystemActivityTracker.ViewModels
         public ICommand RefreshCommand { get; }
         public ICommand SaveSettingsCommand { get; }
         public ICommand LoadWeeklyCommand { get; }
+        public ICommand LoadMonthlyUsageCommand { get; }
         public ICommand ForceWriteNowCommand { get; }
 
         public ObservableCollection<AppUsageSummary> TodayAppUsage => _todayAppUsage;
         public ObservableCollection<DailySummary> WeeklySummaries => _weeklySummaries;
+        public ObservableCollection<MonthlyAppUsageDto> MonthlyAppUsage => _monthlyAppUsage;
+
+        public bool IsMonthlyUsageEmpty
+        {
+            get => _isMonthlyUsageEmpty;
+            private set
+            {
+                if (_isMonthlyUsageEmpty != value)
+                {
+                    _isMonthlyUsageEmpty = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public DateTime SelectedDate
         {
@@ -182,6 +224,124 @@ namespace SystemActivityTracker.ViewModels
         private void RefreshForSelectedDate()
         {
             RefreshTodaySummary();
+            RefreshWeeklySummary();
+        }
+
+        private void UpdateWeekHeaderTexts()
+        {
+            OnPropertyChanged(nameof(WeekNumberText));
+            OnPropertyChanged(nameof(WeekRangeText));
+        }
+
+        private void LoadMonthlyUsage()
+        {
+            _monthlyAppUsage.Clear();
+
+            var start = new DateTime(SelectedMonth.Year, SelectedMonth.Month, 1);
+            var end = start.AddMonths(1).AddDays(-1);
+
+            string baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string appFolder = Path.Combine(baseFolder, "SystemActivityTracker");
+
+            var perProcess = new System.Collections.Generic.Dictionary<string, (TimeSpan Active, TimeSpan Idle, TimeSpan Locked)>(StringComparer.OrdinalIgnoreCase);
+
+            for (var date = start; date <= end; date = date.AddDays(1))
+            {
+                string fileName = $"activity-log-{date:yyyy-MM-dd}.csv";
+                string filePath = Path.Combine(appFolder, fileName);
+
+                if (!File.Exists(filePath))
+                {
+                    continue;
+                }
+
+                foreach (var line in File.ReadLines(filePath))
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    if (line.StartsWith("StartTime", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var fields = ParseCsvLine(line);
+                    if (fields.Length < 6)
+                    {
+                        continue;
+                    }
+
+                    if (!DateTime.TryParse(fields[0], null, DateTimeStyles.RoundtripKind, out var startTime))
+                    {
+                        continue;
+                    }
+
+                    if (!DateTime.TryParse(fields[1], null, DateTimeStyles.RoundtripKind, out var endTime))
+                    {
+                        continue;
+                    }
+
+                    if (!bool.TryParse(fields[4], out var isLocked))
+                    {
+                        continue;
+                    }
+
+                    if (!bool.TryParse(fields[5], out var isIdle))
+                    {
+                        continue;
+                    }
+
+                    if (endTime < startTime)
+                    {
+                        continue;
+                    }
+
+                    var duration = endTime - startTime;
+                    string processName = fields.Length > 2 ? fields[2] : string.Empty;
+                    if (string.IsNullOrWhiteSpace(processName))
+                    {
+                        processName = "(Unknown)";
+                    }
+
+                    if (!perProcess.TryGetValue(processName, out var totals))
+                    {
+                        totals = (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
+                    }
+
+                    if (isLocked)
+                    {
+                        totals.Locked += duration;
+                    }
+                    else if (isIdle)
+                    {
+                        totals.Idle += duration;
+                    }
+                    else
+                    {
+                        totals.Active += duration;
+                    }
+
+                    perProcess[processName] = totals;
+                }
+            }
+
+            foreach (var kvp in perProcess
+                         .OrderByDescending(k => k.Value.Active)
+                         .ThenByDescending(k => k.Value.Idle)
+                         .ThenByDescending(k => k.Value.Locked))
+            {
+                _monthlyAppUsage.Add(new MonthlyAppUsageDto
+                {
+                    ProcessName = kvp.Key,
+                    TotalActive = kvp.Value.Active,
+                    TotalIdle = kvp.Value.Idle,
+                    TotalLocked = kvp.Value.Locked
+                });
+            }
+
+            IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
         }
 
         public DateTime WeekStartDate
@@ -194,7 +354,20 @@ namespace SystemActivityTracker.ViewModels
                 {
                     _weekStartDate = normalized;
                     OnPropertyChanged();
+                    UpdateWeekHeaderTexts();
                 }
+            }
+        }
+
+        public string WeekNumberText => $"Week {ISOWeek.GetWeekOfYear(WeekStartDate.Date)}";
+
+        public string WeekRangeText
+        {
+            get
+            {
+                var from = WeekStartDate.Date;
+                var to = from.AddDays(6);
+                return $"{from:dd-MMM-yyyy} → {to:dd-MMM-yyyy}";
             }
         }
 
@@ -301,9 +474,17 @@ namespace SystemActivityTracker.ViewModels
         public string TotalIdleTimeTodayDisplay => FormatTimeSpan(TotalIdleTimeToday);
         public string TotalLockedTimeTodayDisplay => FormatTimeSpan(TotalLockedTimeToday);
 
-        public string SelectedDayActiveText  => $"Active: {TotalActiveTimeToday.ToHoursMinutes()}";
-        public string SelectedDayIdleText    => $"Idle: {TotalIdleTimeToday.ToHoursMinutes()}";
-        public string SelectedDayLockedText  => $"Locked: {TotalLockedTimeToday.ToHoursMinutes()}";
+        public string SelectedDayActiveText  => $"{TotalActiveTimeToday.ToHoursMinutes()}";
+        public string SelectedDayIdleText    => $"{TotalIdleTimeToday.ToHoursMinutes()}";
+        public string SelectedDayLockedText  => $"{TotalLockedTimeToday.ToHoursMinutes()}";
+
+        public string SelectedDayStartText => _selectedDayStartTime.HasValue
+            ? $"{_selectedDayStartTime.Value:HH:mm}"
+            : "";
+
+        public string SelectedDayEndText => _selectedDayEndTime.HasValue
+            ? $"{_selectedDayEndTime.Value:HH:mm}"
+            : "";
 
         public TimeSpan WeeklyTotalActiveDuration
         {
@@ -347,9 +528,9 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        public string WeeklyTotalActiveText  => $"Total Active: {WeeklyTotalActiveDuration.ToHoursMinutes()}";
-        public string WeeklyTotalIdleText    => $"Total Idle: {WeeklyTotalIdleDuration.ToHoursMinutes()}";
-        public string WeeklyTotalLockedText  => $"Total Locked: {WeeklyTotalLockedDuration.ToHoursMinutes()}";
+        public string WeeklyTotalActiveText  => $"{WeeklyTotalActiveDuration.ToHoursMinutes()}";
+        public string WeeklyTotalIdleText    => $"{WeeklyTotalIdleDuration.ToHoursMinutes()}";
+        public string WeeklyTotalLockedText  => $"{WeeklyTotalLockedDuration.ToHoursMinutes()}";
 
         private void SaveSettings()
         {
@@ -375,6 +556,8 @@ namespace SystemActivityTracker.ViewModels
             TotalIdleTimeToday = TimeSpan.Zero;
             TotalLockedTimeToday = TimeSpan.Zero;
             _todayAppUsage.Clear();
+            _selectedDayStartTime = null;
+            _selectedDayEndTime = null;
 
             string baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string appFolder = Path.Combine(baseFolder, "SystemActivityTracker");
@@ -383,6 +566,11 @@ namespace SystemActivityTracker.ViewModels
 
             if (!File.Exists(filePath))
             {
+                OnPropertyChanged(nameof(SelectedDayActiveText));
+                OnPropertyChanged(nameof(SelectedDayIdleText));
+                OnPropertyChanged(nameof(SelectedDayLockedText));
+                OnPropertyChanged(nameof(SelectedDayStartText));
+                OnPropertyChanged(nameof(SelectedDayEndText));
                 return;
             }
 
@@ -414,6 +602,16 @@ namespace SystemActivityTracker.ViewModels
                 if (!DateTime.TryParse(fields[1], null, DateTimeStyles.RoundtripKind, out var end))
                 {
                     continue;
+                }
+
+                if (!_selectedDayStartTime.HasValue || start < _selectedDayStartTime.Value)
+                {
+                    _selectedDayStartTime = start;
+                }
+
+                if (!_selectedDayEndTime.HasValue || end > _selectedDayEndTime.Value)
+                {
+                    _selectedDayEndTime = end;
                 }
 
                 if (!bool.TryParse(fields[4], out var isLocked))
@@ -473,6 +671,8 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(SelectedDayActiveText));
             OnPropertyChanged(nameof(SelectedDayIdleText));
             OnPropertyChanged(nameof(SelectedDayLockedText));
+            OnPropertyChanged(nameof(SelectedDayStartText));
+            OnPropertyChanged(nameof(SelectedDayEndText));
         }
 
         private void RefreshSelectedDaySummary()
@@ -534,6 +734,8 @@ namespace SystemActivityTracker.ViewModels
         public void LoadWeeklySummary()
         {
             _weeklySummaries.Clear();
+
+            UpdateWeekHeaderTexts();
 
             string baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string appFolder = Path.Combine(baseFolder, "SystemActivityTracker");

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using Microsoft.Win32;
 using SystemActivityTracker.Services;
 
 namespace SystemActivityTracker
@@ -29,10 +30,24 @@ namespace SystemActivityTracker
             {
                 _trayIconService = new TrayIconService(this, _trackingService);
             }
+
+            SystemEvents.SessionEnding += OnSystemSessionEnding;
+        }
+
+        private void OnSystemSessionEnding(object? sender, SessionEndingEventArgs e)
+        {
+            try
+            {
+                _trackingService?.FlushCurrentRecord();
+            }
+            catch
+            {
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
+            SystemEvents.SessionEnding -= OnSystemSessionEnding;
             _trayIconService?.Dispose();
             _trayIconService = null;
             _trackingService?.Shutdown();

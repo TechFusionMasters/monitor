@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Forms;
 using SystemActivityTracker.Views;
@@ -20,19 +21,37 @@ namespace SystemActivityTracker.Services
             _notifyIcon = new NotifyIcon
             {
                 Text = "System Activity Tracker",
-                Icon = System.Drawing.SystemIcons.Application,
+                Icon = GetAppIcon(),
                 Visible = true
             };
 
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Open", null, (_, __) => ShowMainWindow());
-            contextMenu.Items.Add("Start Tracking", null, (_, __) => _app.Dispatcher.Invoke(() => _trackingService.Start()));
-            contextMenu.Items.Add("Stop Tracking", null, (_, __) => _app.Dispatcher.Invoke(() => _trackingService.Stop()));
-            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Exit", null, (_, __) => ExitApplication());
 
             _notifyIcon.ContextMenuStrip = contextMenu;
             _notifyIcon.DoubleClick += (_, __) => ShowMainWindow();
+        }
+
+        private static System.Drawing.Icon GetAppIcon()
+        {
+            try
+            {
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrWhiteSpace(exePath))
+                {
+                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+                    if (icon != null)
+                    {
+                        return icon;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return System.Drawing.SystemIcons.Application;
         }
 
         private void ShowMainWindow()
@@ -43,18 +62,26 @@ namespace SystemActivityTracker.Services
                 {
                     _app.MainWindow = new MainWindow();
                 }
-
-                if (!_app.MainWindow.IsVisible)
+                if (_app.MainWindow is MainWindow mw)
                 {
-                    _app.MainWindow.Show();
+                    mw.RestoreFromTrayInternal();
                 }
-
-                if (_app.MainWindow.WindowState == WindowState.Minimized)
+                else
                 {
-                    _app.MainWindow.WindowState = WindowState.Normal;
-                }
+                    _app.MainWindow.ShowInTaskbar = true;
 
-                _app.MainWindow.Activate();
+                    if (!_app.MainWindow.IsVisible)
+                    {
+                        _app.MainWindow.Show();
+                    }
+
+                    if (_app.MainWindow.WindowState == WindowState.Minimized)
+                    {
+                        _app.MainWindow.WindowState = WindowState.Normal;
+                    }
+
+                    _app.MainWindow.Activate();
+                }
             });
         }
 
@@ -62,7 +89,6 @@ namespace SystemActivityTracker.Services
         {
             _app.Dispatcher.Invoke(() =>
             {
-                _trackingService.Shutdown();
                 _app.IsShuttingDown = true;
                 _app.Shutdown();
             });

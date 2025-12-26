@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="System Activity Tracker" 
-        Height="900" Width="1200" 
         MinHeight="600" MinWidth="800"
         Background="{StaticResource BackgroundBrush}">
     
@@ -19,179 +18,179 @@
         <!-- Compact Header -->
         <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}" 
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
-                Padding="16,12">
+                Height="52" Padding="0">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="System Activity Tracker" Style="{StaticResource SubHeaderTextStyle}" VerticalAlignment="Center"/>
-                    <TextBlock Text="• Track active, idle, and locked time" Style="{StaticResource SecondaryTextStyle}" 
-                               VerticalAlignment="Center" Margin="12,0,0,0"/>
-                </StackPanel>
+                <TextBlock Grid.Column="0" Text="System Activity Tracker" Style="{StaticResource SubHeaderTextStyle}"
+                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,0,0"/>
 
-                <Border Grid.Column="1" CornerRadius="8" Padding="10,8" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="#FFF3F4F6"/>
-                            <Setter Property="BorderBrush" Value="#FFE5E7EB"/>
-                            <Setter Property="BorderThickness" Value="1"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                    <Setter Property="Background" Value="#FFEAF7EF"/>
-                                    <Setter Property="BorderBrush" Value="#FFBFE6CF"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                    <Setter Property="Background" Value="#FFFEF2F2"/>
-                                    <Setter Property="BorderBrush" Value="#FFFECACA"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                <TextBlock Grid.Column="1" Text="{Binding SelectedDate, StringFormat={}{0:dd-MMM-yyyy}}"
+                           Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"
+                           HorizontalAlignment="Center" TextAlignment="Center"/>
 
-                    <Grid VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Stopped: single static dot -->
-                        <Ellipse x:Name="StoppedDot" Grid.Column="0" Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{StaticResource ErrorBrush}">
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Border Width="74" Height="34" CornerRadius="6"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            VerticalAlignment="Center" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Ellipse Width="15" Height="15" Margin="0,0,6,0">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                                    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="0"/>
+                                        </Setter.Value>
+                                    </Setter>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard Name="HeaderDot1Storyboard">
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="0" To="-4" Duration="0:0:0.45" AutoReverse="True" BeginTime="0:0:0">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <SineEase EasingMode="EaseInOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="HeaderDot1Storyboard"/>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
 
-                        <!-- Running: green dot + 3 activity dots -->
-                        <StackPanel x:Name="RunningDots" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,8,0">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
+                        <Ellipse Width="15" Height="15" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                                    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="0"/>
+                                        </Setter.Value>
+                                    </Setter>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard Name="HeaderDot2Storyboard">
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="0" To="-4" Duration="0:0:0.45" AutoReverse="True" BeginTime="0:0:0.15">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <SineEase EasingMode="EaseInOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="HeaderDot2Storyboard"/>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </StackPanel.Style>
+                            </Ellipse.Style>
+                        </Ellipse>
 
-                            <Ellipse Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
-                                <Ellipse Width="4" Height="4" Margin="0,0,3,0" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard Name="Dot1Storyboard">
-                                                            <Storyboard RepeatBehavior="Forever">
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
-                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
-                                                        <StopStoryboard BeginStoryboardName="Dot1Storyboard"/>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-
-                                <Ellipse Width="4" Height="4" Margin="0,0,3,0" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard Name="Dot2Storyboard">
-                                                            <Storyboard RepeatBehavior="Forever">
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
-                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.2"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
-                                                        <StopStoryboard BeginStoryboardName="Dot2Storyboard"/>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-
-                                <Ellipse Width="4" Height="4" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard Name="Dot3Storyboard">
-                                                            <Storyboard RepeatBehavior="Forever">
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
-                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.4"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
-                                                        <StopStoryboard BeginStoryboardName="Dot3Storyboard"/>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <TextBlock Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
-                                    <Setter Property="Text" Value="Stopped"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Ellipse Width="15" Height="15">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                                    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="0"/>
+                                        </Setter.Value>
+                                    </Setter>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                            <Setter Property="Text" Value="Running"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                            <Setter Property="Text" Value="Stopped"/>
+                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard Name="HeaderDot3Storyboard">
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                         From="0" To="-4" Duration="0:0:0.45" AutoReverse="True" BeginTime="0:0:0.3">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <SineEase EasingMode="EaseInOut"/>
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="HeaderDot3Storyboard"/>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
-                </Border>
+                            </Ellipse.Style>
+                        </Ellipse>
+                    </StackPanel>
+                    </Border>
+
+                    <Button Content="Exit"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Padding="10,4" Height="30" VerticalAlignment="Center"
+                            Click="ExitButton_Click"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- Main Content - Summary + Tabs -->
-        <Grid Grid.Row="1" Margin="16,12,16,0">
+        <Grid Grid.Row="1" Margin="12">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- Combined Summary Card -->
-            <Grid Grid.Row="0" Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+            <Border Grid.Row="0" Background="Transparent" HorizontalAlignment="Stretch" Margin="0,0,0,12">
+                <ItemsControl HorizontalAlignment="Stretch">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Stretch" ItemWidth="320"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="Border">
+                            <Setter Property="Margin" Value="0,0,12,12"/>
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
 
                     <!-- Column 1: Day Summary -->
-                    <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                    <Border Background="White" CornerRadius="10" Padding="12" BorderBrush="#E5E7EB" BorderThickness="1"
+                            MinWidth="320" HorizontalAlignment="Stretch">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
                         </Border.Effect>
@@ -218,25 +217,36 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedDayActiveText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Started" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedDayStartText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Idle" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedDayIdleText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Ended" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedDayEndText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Locked" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedDayLockedText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedDayActiveText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Idle" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedDayIdleText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Locked" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedDayLockedText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
                             </Grid>
                         </StackPanel>
                     </Border>
 
                     <!-- Column 2: Week Summary -->
-                    <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                    <Border Background="White" CornerRadius="10" Padding="12" BorderBrush="#E5E7EB" BorderThickness="1"
+                            MinWidth="320" HorizontalAlignment="Stretch">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
                         </Border.Effect>
@@ -244,6 +254,9 @@
                         <StackPanel>
                             <TextBlock Text="This Week" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"
                                        FontWeight="SemiBold" FontSize="15"/>
+
+                            <TextBlock Text="{Binding WeekNumberText}" Style="{StaticResource SecondaryTextStyle}"/>
+                            <TextBlock Text="{Binding WeekRangeText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,2,0,8"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -272,7 +285,8 @@
                     </Border>
 
                     <!-- Column 3: Controls + Developer/Test -->
-                    <Border Grid.Column="2" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                    <Border Background="White" CornerRadius="10" Padding="12" BorderBrush="#E5E7EB" BorderThickness="1"
+                            MinWidth="320" HorizontalAlignment="Stretch">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
                         </Border.Effect>
@@ -293,7 +307,7 @@
 
                                 <!-- Row 1 -->
                                 <Button Grid.Row="0" Grid.Column="0" Content="Start Tracking" Command="{Binding StartCommand}" 
-                                        Margin="0,0,10,6" HorizontalAlignment="Stretch">
+                                        Margin="0,0,10,6" HorizontalAlignment="Stretch" >
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
                                             <Style.Triggers>
@@ -370,7 +384,9 @@
                             </Border>
                         </StackPanel>
                     </Border>
-                </Grid>
+
+                </ItemsControl>
+            </Border>
             <!-- Tabs -->
             <TabControl Grid.Row="1" Style="{StaticResource ModernTabControlStyle}">
                 
@@ -463,13 +479,137 @@
                         </Border>
 
                         <!-- Weekly Totals -->
-                        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Weekly Totals" Style="{StaticResource SectionHeaderTextStyle}"/>
-                                <TextBlock Text="{Binding WeeklyTotalActiveText}" Style="{StaticResource BodyTextStyle}" Margin="0,4,0,0"/>
-                                <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,0"/>
-                                <TextBlock Text="{Binding WeeklyTotalLockedText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,0"/>
-                            </StackPanel>
+                        <Grid Grid.Row="2" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Padding="0" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource SuccessBrush}" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
+                                        <TextBlock Text="Active" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeeklyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="0" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource BorderBrush}" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
+                                        <TextBlock Text="Idle" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="4" Style="{StaticResource CardStyle}" Padding="0" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource ErrorBrush}" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
+                                        <TextBlock Text="Locked" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeeklyTotalLockedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <!-- Monthly Usage Tab -->
+                <TabItem Header="Monthly Usage" Style="{StaticResource ModernTabItemStyle}">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}"
+                                           VerticalAlignment="Center" HorizontalAlignment="Left"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="Month:" Style="{StaticResource BodyTextStyle}"
+                                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <DatePicker SelectedDate="{Binding SelectedMonth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Width="140" Margin="0,0,8,0"/>
+                                    <Button Content="Load" Style="{StaticResource SecondaryButtonStyle}"
+                                            Command="{Binding LoadMonthlyUsageCommand}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <TextBlock Text="No data for selected month"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryTextStyle}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMonthlyUsageEmpty}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <DataGrid ItemsSource="{Binding MonthlyAppUsage}"
+                                          VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0">
+                                    <DataGrid.Style>
+                                        <Style TargetType="DataGrid" BasedOn="{StaticResource ModernDataGridStyle}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMonthlyUsageEmpty}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGrid.Style>
+
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource ModernDataGridColumnHeaderStyle}"/>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.RowStyle>
+                                        <Style TargetType="DataGridRow" BasedOn="{StaticResource ModernDataGridRowStyle}"/>
+                                    </DataGrid.RowStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource ModernDataGridCellStyle}"/>
+                                    </DataGrid.CellStyle>
+
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="App / Process" Binding="{Binding ProcessName}" Width="2*"/>
+                                        <DataGridTextColumn Header="Total Active" Binding="{Binding TotalActiveText, Mode=OneWay}" Width="1*"/>
+                                        <DataGridTextColumn Header="Total Idle" Binding="{Binding TotalIdleText, Mode=OneWay}" Width="1*"/>
+                                        <DataGridTextColumn Header="Total Locked" Binding="{Binding TotalLockedText, Mode=OneWay}" Width="1*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
                         </Border>
                     </Grid>
                 </TabItem>
