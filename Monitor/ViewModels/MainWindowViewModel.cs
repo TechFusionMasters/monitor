@@ -46,7 +46,7 @@ namespace SystemActivityTracker.ViewModels
 
             StopCommand = new RelayCommand(_ => StopTracking());
 
-            RefreshCommand = new RelayCommand(_ => RefreshTodaySummary());
+            RefreshCommand = new RelayCommand(_ => RefreshForSelectedDate());
 
             SaveSettingsCommand = new RelayCommand(_ => SaveSettings());
             LoadWeeklyCommand = new RelayCommand(_ => LoadWeeklySummary());
@@ -85,6 +85,8 @@ namespace SystemActivityTracker.ViewModels
             }
 
             LoadWeeklySummary();
+
+            RefreshForSelectedDate();
         }
 
         private void StartTracking()
@@ -166,13 +168,20 @@ namespace SystemActivityTracker.ViewModels
             get => _selectedDate;
             set
             {
-                if (_selectedDate != value)
+                var normalized = (value == default ? DateTime.Today : value).Date;
+                if (_selectedDate != normalized)
                 {
-                    _selectedDate = value.Date;
+                    _selectedDate = normalized;
                     OnPropertyChanged();
                     ApplyLiveRefreshSettings();
+                    RefreshForSelectedDate();
                 }
             }
+        }
+
+        private void RefreshForSelectedDate()
+        {
+            RefreshTodaySummary();
         }
 
         public DateTime WeekStartDate

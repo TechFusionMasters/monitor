@@ -14,18 +14,165 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Compact Header -->
         <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}" 
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" 
                 Padding="16,12">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="System Activity Tracker" Style="{StaticResource SubHeaderTextStyle}" VerticalAlignment="Center"/>
-                <TextBlock Text="• Track active, idle, and locked time" Style="{StaticResource SecondaryTextStyle}" 
-                           VerticalAlignment="Center" Margin="12,0,0,0"/>
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="System Activity Tracker" Style="{StaticResource SubHeaderTextStyle}" VerticalAlignment="Center"/>
+                    <TextBlock Text="• Track active, idle, and locked time" Style="{StaticResource SecondaryTextStyle}" 
+                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                </StackPanel>
+
+                <Border Grid.Column="1" CornerRadius="8" Padding="10,8" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#FFF3F4F6"/>
+                            <Setter Property="BorderBrush" Value="#FFE5E7EB"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                    <Setter Property="Background" Value="#FFEAF7EF"/>
+                                    <Setter Property="BorderBrush" Value="#FFBFE6CF"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                    <Setter Property="Background" Value="#FFFEF2F2"/>
+                                    <Setter Property="BorderBrush" Value="#FFFECACA"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Stopped: single static dot -->
+                        <Ellipse x:Name="StoppedDot" Grid.Column="0" Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{StaticResource ErrorBrush}">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+
+                        <!-- Running: green dot + 3 activity dots -->
+                        <StackPanel x:Name="RunningDots" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,8,0">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <Ellipse Width="10" Height="10" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                                <Ellipse Width="4" Height="4" Margin="0,0,3,0" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard Name="Dot1Storyboard">
+                                                            <Storyboard RepeatBehavior="Forever">
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
+                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="Dot1Storyboard"/>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+
+                                <Ellipse Width="4" Height="4" Margin="0,0,3,0" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard Name="Dot2Storyboard">
+                                                            <Storyboard RepeatBehavior="Forever">
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
+                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.2"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="Dot2Storyboard"/>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+
+                                <Ellipse Width="4" Height="4" Fill="{StaticResource SuccessBrush}" Opacity="0.25">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard Name="Dot3Storyboard">
+                                                            <Storyboard RepeatBehavior="Forever">
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.25" To="1"
+                                                                                 Duration="0:0:0.6" AutoReverse="True" BeginTime="0:0:0.4"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="Dot3Storyboard"/>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                    <Setter Property="Text" Value="Stopped"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                            <Setter Property="Text" Value="Running"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                            <Setter Property="Text" Value="Stopped"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+            </Grid>
         </Border>
 
         <!-- Main Content - Summary + Tabs -->
@@ -36,8 +183,7 @@
             </Grid.RowDefinitions>
 
             <!-- Combined Summary Card -->
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
-                <Grid>
+            <Grid Grid.Row="0" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
@@ -45,179 +191,186 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Column 1: Day Summary -->
-                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
+                        </Border.Effect>
 
-                            <TextBlock Text="Selected Day" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"/>
-                            <DatePicker Grid.Column="1" SelectedDate="{Binding SelectedDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        Width="140"/>
-                        </Grid>
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                                <TextBlock Text="Selected Day" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"
+                                           FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"/>
+                                <DatePicker Grid.Column="1" SelectedDate="{Binding SelectedDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Width="140"/>
+                            </Grid>
 
-                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding SelectedDayActiveText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                <TextBlock Text="Idle" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding SelectedDayIdleText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedDayActiveText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
 
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Locked" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding SelectedDayLockedText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Idle" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedDayIdleText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Locked" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedDayLockedText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Column 2: Week Summary -->
-                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
-                        <TextBlock Text="This Week" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"/>
+                    <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
+                        </Border.Effect>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="This Week" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"
+                                       FontWeight="SemiBold" FontSize="15"/>
 
-                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding WeeklyTotalActiveText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                                <TextBlock Text="Idle" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Total Active" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeeklyTotalActiveText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
 
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Locked" Style="{StaticResource SecondaryTextStyle}"/>
-                                <TextBlock Text="{Binding WeeklyTotalLockedText}" Style="{StaticResource LargeNumberTextStyle}"/>
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Total Idle" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WeeklyTotalIdleText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Locked" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding WeeklyTotalLockedText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Column 3: Controls + Developer/Test -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Controls" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"/>
+                    <Border Grid.Column="2" Background="White" CornerRadius="10" Padding="12" Margin="6" BorderBrush="#E5E7EB" BorderThickness="1">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
+                        </Border.Effect>
 
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Controls" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"
+                                       FontWeight="SemiBold" FontSize="15"/>
 
-                            <!-- Row 1 -->
-                            <Button Grid.Row="0" Grid.Column="0" Content="Start Tracking" Command="{Binding StartCommand}" 
-                                    Margin="0,0,10,6" HorizontalAlignment="Stretch">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                <Setter Property="IsEnabled" Value="False"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource HeaderBackgroundBrush}"
-                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4"
-                                    Padding="10" Margin="0,0,0,6">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <Ellipse>
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse" BasedOn="{StaticResource LargeStatusIndicatorStyle}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                                        <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                                <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <TextBlock VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                        <Setter Property="Text" Value="Running"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                                        <Setter Property="Text" Value="Stopped"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
-                                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                                <Setter Property="Text" Value="Unknown"/>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                <!-- Row 1 -->
+                                <Button Grid.Row="0" Grid.Column="0" Content="Start Tracking" Command="{Binding StartCommand}" 
+                                        Margin="0,0,10,6" HorizontalAlignment="Stretch">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource HeaderBackgroundBrush}"
+                                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                        Padding="10" Margin="0,0,0,6">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Ellipse Style="{StaticResource PulsingLargeStatusIndicatorStyle}"/>
+                                        <TextBlock VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                            <Setter Property="Text" Value="Running"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                                            <Setter Property="Text" Value="Stopped"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                    <Setter Property="Text" Value="Unknown"/>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Row 2 -->
+                                <Button Grid.Row="1" Grid.Column="0" Content="Stop Tracking" Command="{Binding StopCommand}" 
+                                        Margin="0,0,10,0" HorizontalAlignment="Stretch">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                                                    <Setter Property="Background" Value="#DC2626"/>
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <Button Grid.Row="1" Grid.Column="1" Content="Refresh Summary" Command="{Binding RefreshCommand}" 
+                                        Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Stretch"/>
+                            </Grid>
+
+                            <!-- Developer/Test section (keep existing visual design) -->
+                            <Border Style="{StaticResource TestModeCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Developer / Test" Style="{StaticResource BodyTextStyle}" 
+                                               FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <CheckBox Content="Test mode" Style="{StaticResource ModernCheckBoxStyle}" 
+                                              IsChecked="{Binding IsTestMode, Mode=TwoWay}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Enables Force Write Now button" Style="{StaticResource SecondaryTextStyle}" 
+                                               FontSize="11" Margin="0,0,0,8"/>
+                                    <Button Content="Force Write Now" Style="{StaticResource SecondaryButtonStyle}" 
+                                            Command="{Binding ForceWriteNowCommand}" IsEnabled="{Binding IsTestMode}" 
+                                            HorizontalAlignment="Stretch"/>
                                 </StackPanel>
                             </Border>
-
-                            <!-- Row 2 -->
-                            <Button Grid.Row="1" Grid.Column="0" Content="Stop Tracking" Command="{Binding StopCommand}" 
-                                    Margin="0,0,10,0" HorizontalAlignment="Stretch">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                                <Setter Property="Background" Value="#DC2626"/>
-                                                <Setter Property="Foreground" Value="White"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                                <Setter Property="IsEnabled" Value="False"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-
-                            <Button Grid.Row="1" Grid.Column="1" Content="Refresh Summary" Command="{Binding RefreshCommand}" 
-                                    Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Stretch"/>
-                        </Grid>
-
-                        <!-- Developer/Test section (keep existing visual design) -->
-                        <Border Style="{StaticResource TestModeCardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Developer / Test" Style="{StaticResource BodyTextStyle}" 
-                                           FontWeight="SemiBold" Margin="0,0,0,6"/>
-                                <CheckBox Content="Test mode" Style="{StaticResource ModernCheckBoxStyle}" 
-                                          IsChecked="{Binding IsTestMode, Mode=TwoWay}" Margin="0,0,0,4"/>
-                                <TextBlock Text="Enables Force Write Now button" Style="{StaticResource SecondaryTextStyle}" 
-                                           FontSize="11" Margin="0,0,0,8"/>
-                                <Button Content="Force Write Now" Style="{StaticResource SecondaryButtonStyle}" 
-                                        Command="{Binding ForceWriteNowCommand}" IsEnabled="{Binding IsTestMode}" 
-                                        HorizontalAlignment="Stretch"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </Grid>
-            </Border>
-
             <!-- Tabs -->
             <TabControl Grid.Row="1" Style="{StaticResource ModernTabControlStyle}">
                 
@@ -374,32 +527,5 @@
                 </TabItem>
             </TabControl>
         </Grid>
-
-        <!-- Status Bar -->
-        <Border Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" 
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" 
-                Padding="24,12">
-            <StackPanel Orientation="Horizontal">
-                <Ellipse>
-                    <Ellipse.Style>
-                        <Style TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
-                                    <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
-                                    <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                            <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
-                        </Style>
-                    </Ellipse.Style>
-                </Ellipse>
-                <TextBlock Text="{Binding TrackingStatus}" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding TodayText}" Style="{StaticResource SecondaryTextStyle}" 
-                           VerticalAlignment="Center" Margin="24,0,0,0"/>
-            </StackPanel>
-        </Border>
-        
     </Grid>
 </Window>

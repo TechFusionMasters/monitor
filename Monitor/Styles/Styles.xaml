@@ -356,4 +356,78 @@
         </Setter>
     </Style>
 
+    <Style x:Key="PulsingStatusIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource StatusIndicatorStyle}">
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard Name="PulseStoryboard">
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.4" Duration="0:0:0.6"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="1" To="1.25" Duration="0:0:0.6"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="1" To="1.25" Duration="0:0:0.6"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="PulseStoryboard"/>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                <Setter Property="Opacity" Value="1"/>
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PulsingLargeStatusIndicatorStyle" TargetType="Ellipse" BasedOn="{StaticResource LargeStatusIndicatorStyle}">
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1"/>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Fill" Value="{StaticResource TextSecondaryBrush}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Running">
+                <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard Name="PulseStoryboard">
+                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.4" Duration="0:0:0.6"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="1" To="1.25" Duration="0:0:0.6"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="1" To="1.25" Duration="0:0:0.6"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="PulseStoryboard"/>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding TrackingStatus}" Value="Tracking status: Stopped">
+                <Setter Property="Fill" Value="{StaticResource ErrorBrush}"/>
+                <Setter Property="Opacity" Value="1"/>
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
 </ResourceDictionary>
