@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 using SystemActivityTracker.ViewModels;
 
 namespace SystemActivityTracker.Views
@@ -7,6 +8,7 @@ namespace SystemActivityTracker.Views
     public partial class MainWindow : Window
     {
         private bool _isExplicitExit;
+        private bool _didInitialRefresh;
 
         public MainWindow()
         {
@@ -19,10 +21,38 @@ namespace SystemActivityTracker.Views
             {
                 DataContext = new MainWindowViewModel(null, null);
             }
+
+            Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (_didInitialRefresh)
+            {
+                return;
+            }
+
+            _didInitialRefresh = true;
+            RunRefreshCommand();
+        }
+
+        private void RunRefreshCommand()
+        {
+            if (DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            ICommand command = vm.RefreshCommand;
+            if (command.CanExecute(null))
+            {
+                command.Execute(null);
+            }
         }
 
         private void HideToTray()
         {
+            RunRefreshCommand();
             ShowInTaskbar = false;
             Hide();
         }
@@ -49,8 +79,14 @@ namespace SystemActivityTracker.Views
             RestoreFromTray();
         }
 
+        internal void RunRefreshCommandInternal()
+        {
+            RunRefreshCommand();
+        }
+
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
+            RunRefreshCommand();
             _isExplicitExit = true;
 
             if (System.Windows.Application.Current is App app)

@@ -89,6 +89,11 @@ namespace SystemActivityTracker.Services
         {
             _app.Dispatcher.Invoke(() =>
             {
+                if (_app.MainWindow is MainWindow mw)
+                {
+                    mw.RunRefreshCommandInternal();
+                }
+
                 _app.IsShuttingDown = true;
                 _app.Shutdown();
             });
