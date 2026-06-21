@@ -529,10 +529,8 @@
                             <Setter Property="BorderBrush" Value="#E5E7EB"/>
                             <Setter Property="BorderThickness" Value="1"/>
                             <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="Padding" Value="4"/>
-                            <Setter Property="Margin" Value="2"/>
-                            <Setter Property="MinHeight" Value="120"/>
-                            <Setter Property="MinWidth" Value="140"/>
+                            <Setter Property="Padding" Value="2"/>
+                            <Setter Property="Margin" Value="1"/>
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <DropShadowEffect Color="#000000" Opacity="0.25" ShadowDepth="4" BlurRadius="8" Direction="315"/>
@@ -617,13 +615,13 @@
 
                                 <!-- Weekday Headers -->
                                 <UniformGrid Grid.Row="0" Columns="8" Margin="0,0,0,8">
-                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Mon" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Tue" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Wed" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Thu" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Fri" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Sat" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
+                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Summary" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}" Foreground="#10B981"/>
                                 </UniformGrid>
 
@@ -640,7 +638,8 @@
                                                 <Border.InputBindings>
                                                     <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.NavigateToManualTasksFromCalendarCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
-                                                <Grid>
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                <Grid Width="132" Height="110">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="*"/>
@@ -788,6 +787,7 @@
                                                         </StackPanel>
                                                     </Grid>
                                                 </Grid>
+                                                </Viewbox>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -1445,13 +1445,13 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <UniformGrid Grid.Row="0" Columns="7" Margin="0,0,0,8">
-                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Mon" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Tue" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Wed" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Thu" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Fri" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Sat" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
+                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                 </UniformGrid>
                                 <ItemsControl Grid.Row="1" ItemsSource="{Binding LeaveCalendarDays}">
                                     <ItemsControl.ItemsPanel>
