@@ -31,7 +31,7 @@ namespace SystemActivityTracker.ViewModels
     }
 
     // Monthly Calendar Data Model
-    public class MonthlyDayItem : CalendarDayItemBase, INotifyPropertyChanged
+    public class MonthlyDayItem : CalendarDayItemBase, INotifyPropertyChanged, HoursCalculationHelper.MonthlyDayItemLike
     {
         private int _weekNumber;
         private bool _hasManualTasks;
@@ -70,6 +70,11 @@ namespace SystemActivityTracker.ViewModels
         public override bool HasFullDayLeave => LeaveDuration == Models.LeaveDuration.FullDay;
         public override bool HasMorningHalfLeave => LeaveDuration == Models.LeaveDuration.MorningHalf;
         public override bool HasAfternoonHalfLeave => LeaveDuration == Models.LeaveDuration.AfternoonHalf;
+
+        DateTime HoursCalculationHelper.MonthlyDayItemLike.Date => Date;
+        bool HoursCalculationHelper.MonthlyDayItemLike.IsCurrentMonth => IsCurrentMonth;
+        TimeSpan HoursCalculationHelper.MonthlyDayItemLike.TrackedActive => TotalActive;
+        TimeSpan HoursCalculationHelper.MonthlyDayItemLike.Manual => ManualTime;
 
         public void ApplyActivityData(TimeSpan active, TimeSpan idle, TimeSpan locked, TimeSpan manual, bool hasManualTasks)
         {
@@ -268,16 +273,16 @@ namespace SystemActivityTracker.ViewModels
         private TimeSpan _weeklyTrackedActiveDuration;
         private readonly ActivityChartViewModel _activityChartViewModel = new ActivityChartViewModel
         {
-            ScaleFallbackReference = TimeSpan.FromHours(8)
+            ScaleFallbackReference = TimeSpan.FromHours(ExpectedHoursCalculator.StandardDayHours)
         };
         private readonly ActivityChartViewModel _weeklyActivityChartViewModel = new ActivityChartViewModel 
         { 
-            ReferenceTime = TimeSpan.FromHours(40), // 40 hours for weekly benchmark
-            ScaleFallbackReference = TimeSpan.FromHours(40)
+            ReferenceTime = TimeSpan.FromHours(ExpectedHoursCalculator.StandardWeekHours),
+            ScaleFallbackReference = TimeSpan.FromHours(ExpectedHoursCalculator.StandardWeekHours)
         };
         private readonly ActivityChartViewModel _monthlyActivityChartViewModel = new ActivityChartViewModel 
         { 
-            ReferenceTime = TimeSpan.FromHours(8), // 8 hours for daily benchmark
+            ReferenceTime = TimeSpan.FromHours(ExpectedHoursCalculator.StandardDayHours),
             ShowTotalActivityOnly = true // Show only Active bar in monthly view
         };
         private TimeSpan _weeklyManualDuration;
@@ -328,7 +333,7 @@ namespace SystemActivityTracker.ViewModels
 
             LastCrash = lastCrashViewModel ?? new LastCrashViewModel();
             TodayText = DateTime.Now.ToString("dddd, dd MMMM yyyy");
-            _weekStartDate = StartOfWeek(DateTime.Today, DayOfWeek.Monday);
+            _weekStartDate = WorkWeekHelper.GetWeekStartMonday(DateTime.Today);
             _weekPickerDate = DateTime.Today;
 
             // Initialize years list for Manual Tasks timeline (current year ± 5)
@@ -779,22 +784,12 @@ namespace SystemActivityTracker.ViewModels
 
         private TimeSpan ComputeActiveTotalForDate(DateTime date)
         {
-            TimeSpan totalActive = TimeSpan.Zero;
-
             if (!_activityLogReader.TryReadDay(date.Date, out var entries))
             {
                 return TimeSpan.Zero;
             }
 
-            foreach (var entry in entries)
-            {
-                if (!entry.IsLocked && !entry.IsIdle)
-                {
-                    totalActive += entry.EndTime - entry.StartTime;
-                }
-            }
-
-            return totalActive;
+            return HoursCalculationHelper.SumActiveOnly(entries);
         }
 
         public string TodayText { get; }
@@ -1251,7 +1246,7 @@ namespace SystemActivityTracker.ViewModels
 
         private string GetWeekLabel(DateTime date)
         {
-            var startOfWeek = StartOfWeek(date, DayOfWeek.Monday);
+            var startOfWeek = WorkWeekHelper.GetWeekStartMonday(date);
             var endOfWeek = startOfWeek.AddDays(6);
             return $"{startOfWeek:MMM d} - {endOfWeek:MMM d, yyyy}";
         }
@@ -1351,7 +1346,7 @@ namespace SystemActivityTracker.ViewModels
                     RefreshMonthDayCell(date);
                 }
 
-                foreach (var weekNumber in monthDates.Select(GetCalendarWeekNumber).Distinct())
+                foreach (var weekNumber in monthDates.Select(WorkWeekHelper.GetIsoWeekNumber).Distinct())
                 {
                     RefreshMonthWeekSummary(weekNumber);
                 }
@@ -1370,7 +1365,7 @@ namespace SystemActivityTracker.ViewModels
             }
 
             RefreshMonthDayCell(date);
-            RefreshMonthWeekSummary(GetCalendarWeekNumber(date));
+            RefreshMonthWeekSummary(WorkWeekHelper.GetIsoWeekNumber(date));
             NotifyMonthHeaderTotalsChanged();
         }
 
@@ -1410,6 +1405,22 @@ namespace SystemActivityTracker.ViewModels
         {
             var entry = _leaveService.GetForDate(date.Date);
             dayItem.ApplyLeaveData(entry?.Duration, entry?.Type);
+            ApplyLeaveAdjustedReferenceToMonthDayCharts(dayItem, entry?.Duration);
+        }
+
+        private static void ApplyLeaveAdjustedReferenceToMonthDayCharts(MonthlyDayItem dayItem, LeaveDuration? leaveDuration)
+        {
+            var expected = ExpectedHoursCalculator.GetDayExpectedHours(leaveDuration);
+            if (dayItem.ChartViewModel != null)
+            {
+                dayItem.ChartViewModel.ReferenceTime = expected;
+                dayItem.ChartViewModel.UpdateChart();
+            }
+
+            if (dayItem.HorizontalBarViewModel != null)
+            {
+                dayItem.HorizontalBarViewModel.ReferenceTime = expected;
+            }
         }
 
         private void RefreshLeaveSurfacesForDate(DateTime date)
@@ -1454,25 +1465,18 @@ namespace SystemActivityTracker.ViewModels
 
         private void RefreshWeekExpectedHours()
         {
-            var leaveDurations = new List<LeaveDuration?>();
-            var leaveDayCount = 0;
-            var totalDeductionHours = 0;
+            var weekStart = SelectedWeekStart.Date;
+            var leaveDurations = WorkWeekHelper.EnumerateWeekDays(weekStart)
+                .Select(date => _leaveService.GetForDate(date))
+                .ToList();
 
-            for (int i = 0; i < 7; i++)
-            {
-                var date = SelectedWeekStart.Date.AddDays(i);
-                var entry = _leaveService.GetForDate(date);
-                leaveDurations.Add(entry?.Duration);
-                if (entry == null)
-                {
-                    continue;
-                }
+            var leaveDayCount = leaveDurations.Count(e => e != null);
+            var totalDeductionHours = ExpectedHoursCalculator.SumLeaveDeductionHours(
+                leaveDurations.Select(e => e?.Duration));
 
-                leaveDayCount++;
-                totalDeductionHours += (int)ExpectedHoursCalculator.GetLeaveDeductionHours(entry.Duration);
-            }
-
-            _weekExpectedHours = ExpectedHoursCalculator.GetWeekExpectedHours(leaveDurations);
+            _weekExpectedHours = ExpectedHoursCalculator.GetWeekExpectedHours(
+                weekStart,
+                date => _leaveService.GetForDate(date)?.Duration);
             _hasWeekLeave = leaveDayCount > 0;
             _weekLeaveSummaryText = _hasWeekLeave
                 ? $"{leaveDayCount} leave day(s), −{totalDeductionHours}h expected"
@@ -1496,11 +1500,11 @@ namespace SystemActivityTracker.ViewModels
 
         private void RefreshMonthWeekSummary(int weekNumber)
         {
-            var weekTotal = TimeSpan.FromSeconds(
-                _monthlyCalendarDays
-                    .OfType<MonthlyDayItem>()
-                    .Where(d => d.IsCurrentMonth && d.WeekNumber == weekNumber)
-                    .Sum(d => (d.TotalActive + d.ManualTime).TotalSeconds));
+            var weekTotal = HoursCalculationHelper.SumInMonthWeekTotalActive(
+                _monthlyCalendarDays.OfType<MonthlyDayItem>(),
+                weekNumber,
+                _selectedYear,
+                _selectedMonth);
 
             foreach (var summary in _monthlyCalendarDays.OfType<WeeklySummaryDayItem>().Where(s => s.WeekNumber == weekNumber))
             {
@@ -1508,43 +1512,15 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        private static int GetCalendarWeekNumber(DateTime date)
-        {
-            return CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
-                date,
-                CalendarWeekRule.FirstFourDayWeek,
-                DayOfWeek.Sunday);
-        }
-
         private (TimeSpan Active, TimeSpan Idle, TimeSpan Locked) GetActivityTotalsForDate(DateTime date)
         {
-            TimeSpan activeTime = TimeSpan.Zero;
-            TimeSpan idleTime = TimeSpan.Zero;
-            TimeSpan lockedTime = TimeSpan.Zero;
-
             if (!_activityLogReader.TryReadDay(date.Date, out var entries))
             {
-                return (activeTime, idleTime, lockedTime);
+                return (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
             }
 
-            foreach (var entry in entries)
-            {
-                var duration = entry.EndTime - entry.StartTime;
-                if (entry.IsLocked)
-                {
-                    lockedTime += duration;
-                }
-                else if (entry.IsIdle)
-                {
-                    idleTime += duration;
-                }
-                else
-                {
-                    activeTime += duration;
-                }
-            }
-
-            return (activeTime, idleTime, lockedTime);
+            var totals = HoursCalculationHelper.SumActivityEntries(entries);
+            return (totals.Active, totals.Idle, totals.Locked);
         }
 
         private void ResetManualEditState()
@@ -1563,12 +1539,8 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        private bool IsDateInSelectedWeek(DateTime date)
-        {
-            var weekStart = SelectedWeekStart.Date;
-            var weekEnd = weekStart.AddDays(6);
-            return date.Date >= weekStart && date.Date <= weekEnd;
-        }
+        private bool IsDateInSelectedWeek(DateTime date) =>
+            WorkWeekHelper.IsDateInWeek(date, SelectedWeekStart.Date);
 
         private void RefreshWeekIfNeeded(DateTime date)
         {
@@ -1605,9 +1577,7 @@ namespace SystemActivityTracker.ViewModels
             var start = new DateTime(_selectedYear, _selectedMonth, 1);
             var end = start.AddMonths(1).AddDays(-1);
 
-            // Calculate calendar grid start (first day of week for first day of month)
-            var calendarStart = start.AddDays(-(int)start.DayOfWeek);
-            var calendarEnd = end.AddDays(6 - (int)end.DayOfWeek);
+            var (calendarStart, calendarEnd) = WorkWeekHelper.GetMonthCalendarGridRange(_selectedYear, _selectedMonth);
 
             var perProcess = new System.Collections.Generic.Dictionary<string, (TimeSpan Active, TimeSpan Idle, TimeSpan Locked)>(StringComparer.OrdinalIgnoreCase);
 
@@ -1621,32 +1591,22 @@ namespace SystemActivityTracker.ViewModels
 
                 foreach (var entry in entries)
                 {
-                    var duration = entry.EndTime - entry.StartTime;
+                    var totals = HoursCalculationHelper.SumActivityEntries(new[] { entry });
                     string processName = entry.ProcessName;
                     if (string.IsNullOrWhiteSpace(processName))
                     {
                         processName = "(Unknown)";
                     }
 
-                    if (!perProcess.TryGetValue(processName, out var totals))
+                    if (!perProcess.TryGetValue(processName, out var existing))
                     {
-                        totals = (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
+                        existing = (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
                     }
 
-                    if (entry.IsLocked)
-                    {
-                        totals.Locked += duration;
-                    }
-                    else if (entry.IsIdle)
-                    {
-                        totals.Idle += duration;
-                    }
-                    else
-                    {
-                        totals.Active += duration;
-                    }
-
-                    perProcess[processName] = totals;
+                    perProcess[processName] = (
+                        existing.Active + totals.Active,
+                        existing.Idle + totals.Idle,
+                        existing.Locked + totals.Locked);
                 }
             }
 
@@ -1677,9 +1637,12 @@ namespace SystemActivityTracker.ViewModels
                 dayItem.IsFuture = date.Date > DateTime.Today;
                 if (!dayItem.IsFuture)
                 {
+                    leaveByDate.TryGetValue(date.Date, out var leaveEntryForChart);
+                    var dayExpectedHours = ExpectedHoursCalculator.GetDayExpectedHours(leaveEntryForChart?.Duration);
+
                     // Create vertical chart (existing)
                     var chartViewModel = new ActivityChartViewModel();
-                    chartViewModel.ReferenceTime = TimeSpan.FromHours(8);
+                    chartViewModel.ReferenceTime = dayExpectedHours;
                     chartViewModel.ShowReferenceLabel = false;
                     chartViewModel.ShowLegend = false;
                     chartViewModel.ShowDataLabels = false;
@@ -1690,7 +1653,7 @@ namespace SystemActivityTracker.ViewModels
 
                     // Create horizontal bar (new compact view)
                     var horizontalBarViewModel = new HorizontalActivityBarViewModel();
-                    horizontalBarViewModel.ReferenceTime = TimeSpan.FromHours(8);
+                    horizontalBarViewModel.ReferenceTime = dayExpectedHours;
                     dayItem.HorizontalBarViewModel = horizontalBarViewModel;
 
                     dayItem.HasChart = true;
@@ -1701,7 +1664,7 @@ namespace SystemActivityTracker.ViewModels
                 }
 
                 // Set week number
-                dayItem.WeekNumber = GetCalendarWeekNumber(date);
+                dayItem.WeekNumber = WorkWeekHelper.GetIsoWeekNumber(date);
 
                 if (dayItem.IsCurrentMonth)
                 {
@@ -1831,22 +1794,11 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        private int GetManualSecondsForMonth(DateTime month)
-        {
-            var start = new DateTime(month.Year, month.Month, 1);
-            var end = start.AddMonths(1).AddDays(-1);
-
-            int total = 0;
-            for (var date = start; date <= end; date = date.AddDays(1))
-            {
-                foreach (var item in _manualTaskService.Load(date.Date))
-                {
-                    total += Math.Max(0, item.TotalSeconds);
-                }
-            }
-
-            return total;
-        }
+        private int GetManualSecondsForMonth(DateTime month) =>
+            HoursCalculationHelper.SumManualSecondsForMonth(
+                month.Year,
+                month.Month,
+                date => GetManualSecondsForDate(date));
 
         private int GetManualSecondsForDate(DateTime date)
         {
@@ -1894,7 +1846,7 @@ namespace SystemActivityTracker.ViewModels
             get => _weekStartDate;
             set
             {
-                var normalized = GetStartOfWeek(value);
+                var normalized = WorkWeekHelper.GetWeekStartMonday(value);
                 if (_weekStartDate == normalized)
                 {
                     return;
@@ -1938,9 +1890,9 @@ namespace SystemActivityTracker.ViewModels
         public bool IsSelectedWeekInFuture => SelectedWeekStart.Date > DateTime.Today;
 
         public bool IsCurrentWeekSelected =>
-            SelectedWeekStart.Date == GetStartOfWeek(DateTime.Today);
+            SelectedWeekStart.Date == WorkWeekHelper.GetWeekStartMonday(DateTime.Today);
 
-        public string WeekReportHeaderText => $"Week Report (WK{ISOWeek.GetWeekOfYear(SelectedWeekStart.Date)})";
+        public string WeekReportHeaderText => $"Week Report (WK{WorkWeekHelper.GetIsoWeekNumber(SelectedWeekStart.Date)})";
 
         public string SelectedWeekRangeText
         {
@@ -1956,7 +1908,7 @@ namespace SystemActivityTracker.ViewModels
 
         private void JumpToWeek(DateTime date)
         {
-            var weekStart = GetStartOfWeek(date);
+            var weekStart = WorkWeekHelper.GetWeekStartMonday(date);
             if (_weekStartDate != weekStart)
             {
                 SelectedWeekStart = weekStart;
@@ -1980,8 +1932,6 @@ namespace SystemActivityTracker.ViewModels
                 _isSyncingWeekPicker = false;
             }
         }
-
-        private static DateTime GetStartOfWeek(DateTime date) => StartOfWeek(date.Date, DayOfWeek.Monday);
 
         public int IdleThresholdMinutes
         {
@@ -2180,24 +2130,14 @@ namespace SystemActivityTracker.ViewModels
 
             if (_activityLogReader.TryReadDay(selectedDate.Date, out var entries))
             {
-                foreach (var entry in entries)
-                {
-                    var duration = entry.EndTime - entry.StartTime;
-                    if (entry.IsLocked)
-                    {
-                        lockedTime += duration;
-                    }
-                    else if (entry.IsIdle)
-                    {
-                        idleTime += duration;
-                    }
-                    else
-                    {
-                        activeTime += duration;
-                    }
-                }
+                var totals = HoursCalculationHelper.SumActivityEntries(entries);
+                activeTime = totals.Active;
+                idleTime = totals.Idle;
+                lockedTime = totals.Locked;
             }
 
+            var leaveEntry = _leaveService.GetForDate(selectedDate.Date);
+            _monthlyActivityChartViewModel.ReferenceTime = ExpectedHoursCalculator.GetDayExpectedHours(leaveEntry?.Duration);
             _monthlyActivityChartViewModel.SetData(activeTime, manualTime, idleTime, lockedTime);
         }
 
@@ -2462,7 +2402,7 @@ namespace SystemActivityTracker.ViewModels
         private void LoadTimelineForWeek()
         {
             _timelineItems.Clear();
-            var startOfWeek = StartOfWeek(TimelineCurrentDate, DayOfWeek.Monday);
+            var startOfWeek = WorkWeekHelper.GetWeekStartMonday(TimelineCurrentDate);
             
             for (int i = 0; i < 7; i++)
             {
@@ -2749,12 +2689,6 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        private static DateTime StartOfWeek(DateTime date, DayOfWeek startOfWeek)
-        {
-            int diff = (7 + (date.DayOfWeek - startOfWeek)) % 7;
-            return date.AddDays(-1 * diff).Date;
-        }
-
         private void RefreshTodaySummary()
         {
             TotalActiveTimeToday = TimeSpan.Zero;
@@ -2919,9 +2853,8 @@ namespace SystemActivityTracker.ViewModels
         {
             _weeklySummaries.Clear();
 
-            for (int i = 0; i < 7; i++)
+            foreach (var date in WorkWeekHelper.EnumerateWeekDays(SelectedWeekStart.Date))
             {
-                var date = SelectedWeekStart.Date.AddDays(i);
                 _weeklySummaries.Add(BuildDailySummaryForDate(date));
             }
 
@@ -2983,9 +2916,7 @@ namespace SystemActivityTracker.ViewModels
             var leaveByDate = _leaveMonthEntries.ToDictionary(e => e.Date.Date);
 
             var start = new DateTime(_leaveSelectedYear, _leaveSelectedMonth, 1);
-            var end = start.AddMonths(1).AddDays(-1);
-            var calendarStart = start.AddDays(-(int)start.DayOfWeek);
-            var calendarEnd = end.AddDays(6 - (int)end.DayOfWeek);
+            var (calendarStart, calendarEnd) = WorkWeekHelper.GetMonthCalendarGridRange(_leaveSelectedYear, _leaveSelectedMonth);
 
             for (var date = calendarStart; date <= calendarEnd; date = date.AddDays(1))
             {

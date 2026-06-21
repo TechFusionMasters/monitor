@@ -617,13 +617,13 @@
 
                                 <!-- Weekday Headers -->
                                 <UniformGrid Grid.Row="0" Columns="8" Margin="0,0,0,8">
-                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Mon" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Tue" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Wed" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Thu" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Fri" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Sat" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
+                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Summary" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}" Foreground="#10B981"/>
                                 </UniformGrid>
 
@@ -1445,13 +1445,13 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <UniformGrid Grid.Row="0" Columns="7" Margin="0,0,0,8">
-                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Mon" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Tue" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Wed" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Thu" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Fri" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                     <TextBlock Text="Sat" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
+                                    <TextBlock Text="Sun" HorizontalAlignment="Center" FontWeight="SemiBold" Style="{StaticResource SecondaryTextStyle}"/>
                                 </UniformGrid>
                                 <ItemsControl Grid.Row="1" ItemsSource="{Binding LeaveCalendarDays}">
                                     <ItemsControl.ItemsPanel>
