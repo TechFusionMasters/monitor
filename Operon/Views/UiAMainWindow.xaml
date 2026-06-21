@@ -529,10 +529,8 @@
                             <Setter Property="BorderBrush" Value="#E5E7EB"/>
                             <Setter Property="BorderThickness" Value="1"/>
                             <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="Padding" Value="4"/>
-                            <Setter Property="Margin" Value="2"/>
-                            <Setter Property="MinHeight" Value="120"/>
-                            <Setter Property="MinWidth" Value="140"/>
+                            <Setter Property="Padding" Value="2"/>
+                            <Setter Property="Margin" Value="1"/>
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <DropShadowEffect Color="#000000" Opacity="0.25" ShadowDepth="4" BlurRadius="8" Direction="315"/>
@@ -640,7 +638,8 @@
                                                 <Border.InputBindings>
                                                     <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.NavigateToManualTasksFromCalendarCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
-                                                <Grid>
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                                <Grid Width="132" Height="110">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="*"/>
@@ -788,6 +787,7 @@
                                                         </StackPanel>
                                                     </Grid>
                                                 </Grid>
+                                                </Viewbox>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
