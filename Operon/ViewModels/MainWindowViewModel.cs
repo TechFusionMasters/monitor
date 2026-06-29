@@ -28,6 +28,7 @@ namespace SystemActivityTracker.ViewModels
         public virtual bool HasFullDayLeave => false;
         public virtual bool HasMorningHalfLeave => false;
         public virtual bool HasAfternoonHalfLeave => false;
+        public virtual bool IsToday => false;
     }
 
     // Monthly Calendar Data Model
@@ -46,6 +47,7 @@ namespace SystemActivityTracker.ViewModels
         public override bool HasData => TotalActive > TimeSpan.Zero || TotalIdle > TimeSpan.Zero || TotalLocked > TimeSpan.Zero || ManualTime > TimeSpan.Zero;
         public override int WeekNumber { get => _weekNumber; set => _weekNumber = value; }
         public override bool IsWeeklySummary => false;
+        public override bool IsToday => Date.Date == DateTime.Today;
         public ActivityChartViewModel? ChartViewModel { get; set; }
         public HorizontalActivityBarViewModel? HorizontalBarViewModel { get; set; }
         public bool IsFuture { get; set; }
@@ -71,10 +73,15 @@ namespace SystemActivityTracker.ViewModels
         public override bool HasMorningHalfLeave => LeaveDuration == Models.LeaveDuration.MorningHalf;
         public override bool HasAfternoonHalfLeave => LeaveDuration == Models.LeaveDuration.AfternoonHalf;
 
+        // Leave credit derived from the already-applied LeaveDuration (Mon–Fri only).
+        public TimeSpan LeaveCredit =>
+            ExpectedHoursCalculator.GetDayLeaveCredit(Date, LeaveDuration);
+
         DateTime HoursCalculationHelper.MonthlyDayItemLike.Date => Date;
         bool HoursCalculationHelper.MonthlyDayItemLike.IsCurrentMonth => IsCurrentMonth;
         TimeSpan HoursCalculationHelper.MonthlyDayItemLike.TrackedActive => TotalActive;
         TimeSpan HoursCalculationHelper.MonthlyDayItemLike.Manual => ManualTime;
+        TimeSpan HoursCalculationHelper.MonthlyDayItemLike.LeaveCredit => LeaveCredit;
 
         public void ApplyActivityData(TimeSpan active, TimeSpan idle, TimeSpan locked, TimeSpan manual, bool hasManualTasks)
         {
@@ -293,11 +300,15 @@ namespace SystemActivityTracker.ViewModels
         private DateTime? _selectedDayEndTime;
         private TimeSpan _selectedDayManualDuration;
         private TimeSpan _selectedDayExpectedHours = TimeSpan.FromHours(ExpectedHoursCalculator.StandardDayHours);
+        private TimeSpan _selectedDayLeaveCredit = TimeSpan.Zero;
         private string _selectedDayLeaveSummaryText = string.Empty;
         private bool _hasSelectedDayLeave;
         private TimeSpan _weekExpectedHours = TimeSpan.FromHours(ExpectedHoursCalculator.StandardWeekHours);
+        private TimeSpan _weekLeaveCredit = TimeSpan.Zero;
         private string _weekLeaveSummaryText = string.Empty;
         private bool _hasWeekLeave;
+        private TimeSpan _weeklyLeaveDuration;
+        private TimeSpan _monthLeaveCredit = TimeSpan.Zero;
         private DateTime? _runStartUtc;
         private TimeSpan _accumulatedRunTime = TimeSpan.Zero;
         private readonly DispatcherTimer _runningTimer = new DispatcherTimer();
@@ -1288,9 +1299,13 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(ManualTotalText));
             OnPropertyChanged(nameof(GrandTotalText));
             OnPropertyChanged(nameof(SelectedDayManualTasksText));
+            OnPropertyChanged(nameof(SelectedDayActiveText));
             OnPropertyChanged(nameof(SelectedDayTotalActiveText));
+            OnPropertyChanged(nameof(SelectedDayStatusText));
             OnPropertyChanged(nameof(MonthlyManualTasksText));
+            OnPropertyChanged(nameof(MonthlyActiveText));
             OnPropertyChanged(nameof(MonthlyTotalActiveText));
+            OnPropertyChanged(nameof(MonthlyStatusText));
         }
 
         private void NotifyMonthHeaderTotalsChanged()
@@ -1298,6 +1313,10 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyActiveTrackedText));
             OnPropertyChanged(nameof(MonthlyManualTasksText));
             OnPropertyChanged(nameof(MonthlyTotalActiveText));
+            OnPropertyChanged(nameof(MonthlyExpectedText));
+            OnPropertyChanged(nameof(MonthlyActiveText));
+            OnPropertyChanged(nameof(MonthlyLeaveText));
+            OnPropertyChanged(nameof(MonthlyStatusText));
         }
 
         /// <summary>
@@ -1408,9 +1427,10 @@ namespace SystemActivityTracker.ViewModels
             ApplyLeaveAdjustedReferenceToMonthDayCharts(dayItem, entry?.Duration);
         }
 
-        private static void ApplyLeaveAdjustedReferenceToMonthDayCharts(MonthlyDayItem dayItem, LeaveDuration? leaveDuration)
+        private static void ApplyLeaveAdjustedReferenceToMonthDayCharts(MonthlyDayItem dayItem, LeaveDuration? _)
         {
-            var expected = ExpectedHoursCalculator.GetDayExpectedHours(leaveDuration);
+            // Reference is always date-based expected (8h weekday / 0h weekend); leave no longer reduces it.
+            var expected = ExpectedHoursCalculator.GetDayExpectedHours(dayItem.Date);
             if (dayItem.ChartViewModel != null)
             {
                 dayItem.ChartViewModel.ReferenceTime = expected;
@@ -1434,12 +1454,21 @@ namespace SystemActivityTracker.ViewModels
 
             if (IsDateInSelectedWeek(normalized))
             {
+                RefreshWeeklySummaryDay(normalized);
                 RefreshWeekExpectedHours();
+                RecalculateWeeklyTotals();
             }
 
             if (IsDateInSelectedMonth(normalized))
             {
                 RefreshMonthDayLeaveCell(normalized);
+                RefreshMonthWeekSummary(WorkWeekHelper.GetIsoWeekNumber(normalized));
+                _monthLeaveCredit = TimeSpan.FromSeconds(
+                    _monthlyCalendarDays
+                        .OfType<MonthlyDayItem>()
+                        .Where(d => d.IsCurrentMonth)
+                        .Sum(d => d.LeaveCredit.TotalSeconds));
+                NotifyMonthHeaderTotalsChanged();
             }
         }
 
@@ -1450,12 +1479,19 @@ namespace SystemActivityTracker.ViewModels
             _selectedDayLeaveSummaryText = entry == null
                 ? string.Empty
                 : $"Leave: {FormatLeaveType(entry.Type)} — {FormatLeaveDuration(entry.Duration)}";
-            _selectedDayExpectedHours = ExpectedHoursCalculator.GetDayExpectedHours(entry?.Duration);
+
+            // Expected is always 8h for Mon–Fri regardless of leave.
+            _selectedDayExpectedHours = ExpectedHoursCalculator.GetDayExpectedHours(SelectedDate);
+            _selectedDayLeaveCredit = ExpectedHoursCalculator.GetDayLeaveCredit(SelectedDate, entry?.Duration);
 
             OnPropertyChanged(nameof(HasSelectedDayLeave));
             OnPropertyChanged(nameof(SelectedDayLeaveSummaryText));
             OnPropertyChanged(nameof(SelectedDayExpectedHours));
             OnPropertyChanged(nameof(SelectedDayExpectedHoursText));
+            OnPropertyChanged(nameof(SelectedDayLeaveHoursText));
+            OnPropertyChanged(nameof(SelectedDayActiveText));
+            OnPropertyChanged(nameof(SelectedDayTotalActiveText));
+            OnPropertyChanged(nameof(SelectedDayStatusText));
 
             if (!IsSelectedDateInFuture)
             {
@@ -1466,26 +1502,30 @@ namespace SystemActivityTracker.ViewModels
         private void RefreshWeekExpectedHours()
         {
             var weekStart = SelectedWeekStart.Date;
-            var leaveDurations = WorkWeekHelper.EnumerateWeekDays(weekStart)
+            var leaveEntries = WorkWeekHelper.EnumerateWeekDays(weekStart)
                 .Select(date => _leaveService.GetForDate(date))
                 .ToList();
 
-            var leaveDayCount = leaveDurations.Count(e => e != null);
-            var totalDeductionHours = ExpectedHoursCalculator.SumLeaveDeductionHours(
-                leaveDurations.Select(e => e?.Duration));
+            var leaveDayCount = leaveEntries.Count(e => e != null);
 
-            _weekExpectedHours = ExpectedHoursCalculator.GetWeekExpectedHours(
+            // Expected is always 40h — leave does NOT reduce it.
+            _weekExpectedHours = ExpectedHoursCalculator.GetWeekExpectedHours();
+            _weekLeaveCredit = ExpectedHoursCalculator.GetWeekLeaveCredit(
                 weekStart,
                 date => _leaveService.GetForDate(date)?.Duration);
             _hasWeekLeave = leaveDayCount > 0;
             _weekLeaveSummaryText = _hasWeekLeave
-                ? $"{leaveDayCount} leave day(s), −{totalDeductionHours}h expected"
+                ? $"{leaveDayCount} leave day(s)"
                 : string.Empty;
 
             OnPropertyChanged(nameof(HasWeekLeave));
             OnPropertyChanged(nameof(WeekLeaveSummaryText));
             OnPropertyChanged(nameof(WeekExpectedHours));
             OnPropertyChanged(nameof(WeekExpectedHoursText));
+            OnPropertyChanged(nameof(WeekLeaveHoursText));
+            OnPropertyChanged(nameof(WeekActiveText));
+            OnPropertyChanged(nameof(WeekTotalActiveText));
+            OnPropertyChanged(nameof(WeekStatusText));
 
             if (!IsSelectedWeekInFuture)
             {
@@ -1533,6 +1573,10 @@ namespace SystemActivityTracker.ViewModels
         {
             OnPropertyChanged(nameof(SelectedDayStartText));
             OnPropertyChanged(nameof(SelectedDayEndText));
+            OnPropertyChanged(nameof(SelectedDayActiveTrackedText));
+            OnPropertyChanged(nameof(SelectedDayActiveText));
+            OnPropertyChanged(nameof(SelectedDayTotalActiveText));
+            OnPropertyChanged(nameof(SelectedDayStatusText));
             if (!IsSelectedDateInFuture)
             {
                 UpdateActivityChart();
@@ -1637,8 +1681,8 @@ namespace SystemActivityTracker.ViewModels
                 dayItem.IsFuture = date.Date > DateTime.Today;
                 if (!dayItem.IsFuture)
                 {
-                    leaveByDate.TryGetValue(date.Date, out var leaveEntryForChart);
-                    var dayExpectedHours = ExpectedHoursCalculator.GetDayExpectedHours(leaveEntryForChart?.Duration);
+                    // Expected = 8h on weekdays, 0 on weekends — not reduced by leave.
+                    var dayExpectedHours = ExpectedHoursCalculator.GetDayExpectedHours(date);
 
                     // Create vertical chart (existing)
                     var chartViewModel = new ActivityChartViewModel();
@@ -1684,13 +1728,14 @@ namespace SystemActivityTracker.ViewModels
                 _monthlyCalendarDays.Add(dayItem);
             }
 
-            // Calculate weekly summaries
+            // Calculate weekly summaries: TotalActive = tracked + manual + leave (in-month days only).
             var weeklyGroups = _monthlyCalendarDays
                 .Where(d => d.IsCurrentMonth && d is MonthlyDayItem)
                 .Cast<MonthlyDayItem>()
                 .GroupBy(d => d.WeekNumber)
                 .OrderBy(g => g.Key)
-                .ToDictionary(g => g.Key, g => TimeSpan.FromSeconds(g.Sum(d => (d.TotalActive + d.ManualTime).TotalSeconds)));
+                .ToDictionary(g => g.Key, g => TimeSpan.FromSeconds(
+                    g.Sum(d => (d.TotalActive + d.ManualTime + d.LeaveCredit).TotalSeconds)));
 
             // Create the final calendar grid with proper layout
             var finalCalendarItems = new List<CalendarDayItemBase>();
@@ -1768,6 +1813,12 @@ namespace SystemActivityTracker.ViewModels
                 _monthlyCalendarDays.Add(item);
             }
 
+            // Compute monthly leave credit from in-month Mon–Fri leave entries.
+            var monthLeaveLookup = monthLeaves.ToDictionary(l => l.Date.Date);
+            _monthLeaveCredit = ExpectedHoursCalculator.GetMonthLeaveCredit(
+                _selectedYear, _selectedMonth,
+                date => monthLeaveLookup.TryGetValue(date, out var e) ? e?.Duration : null);
+
             IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
 
             NotifyMonthHeaderTotalsChanged();
@@ -1784,13 +1835,48 @@ namespace SystemActivityTracker.ViewModels
 
         public string MonthlyManualTasksText => FormatTimeSpan(TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime)));
 
-        public string MonthlyTotalActiveText
+        // ── New unified monthly properties ────────────────────────────────────────
+
+        public string MonthlyExpectedText =>
+            FormatTimeSpan(ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today));
+
+        // Active = tracked + manual.
+        public string MonthlyActiveText
         {
             get
             {
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 return FormatTimeSpan(tracked + manual);
+            }
+        }
+
+        public string MonthlyLeaveText => FormatTimeSpan(_monthLeaveCredit);
+
+        // TotalActive = tracked + manual + leave.
+        public string MonthlyTotalActiveText
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                return FormatTimeSpan(tracked + manual + _monthLeaveCredit);
+            }
+        }
+
+        public string MonthlyStatusText
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var summary = new HoursCalculationHelper.PeriodHoursSummary
+                {
+                    Expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today),
+                    Active = tracked + manual,
+                    Leave = _monthLeaveCredit
+                };
+                return summary.StatusText;
             }
         }
 
@@ -2062,9 +2148,37 @@ namespace SystemActivityTracker.ViewModels
         public string TotalIdleTimeTodayDisplay => FormatTimeSpan(TotalIdleTimeToday);
         public string TotalLockedTimeTodayDisplay => FormatTimeSpan(TotalLockedTimeToday);
 
+        // Tracked-only active (for backward compat / chart data).
         public string SelectedDayActiveTrackedText => $"{TotalActiveTimeToday.ToHoursMinutes()}";
         public string SelectedDayManualTasksText => $"{_selectedDayManualDuration.ToHoursMinutes()}";
-        public string SelectedDayTotalActiveText => $"{(TotalActiveTimeToday + _selectedDayManualDuration).ToHoursMinutes()}";
+
+        // ── New unified day properties ─────────────────────────────────────────────
+
+        // Active = tracked + manual.
+        public string SelectedDayActiveText =>
+            (TotalActiveTimeToday + _selectedDayManualDuration).ToHoursMinutes();
+
+        // Leave credit in hours.
+        public string SelectedDayLeaveHoursText => _selectedDayLeaveCredit.ToHoursMinutes();
+
+        // TotalActive = tracked + manual + leave.
+        public string SelectedDayTotalActiveText =>
+            (TotalActiveTimeToday + _selectedDayManualDuration + _selectedDayLeaveCredit).ToHoursMinutes();
+
+        public string SelectedDayStatusText
+        {
+            get
+            {
+                var summary = new HoursCalculationHelper.PeriodHoursSummary
+                {
+                    Expected = _selectedDayExpectedHours,
+                    Active = TotalActiveTimeToday + _selectedDayManualDuration,
+                    Leave = _selectedDayLeaveCredit
+                };
+                return summary.StatusText;
+            }
+        }
+
         public string SelectedDayIdleText => $"{TotalIdleTimeToday.ToHoursMinutes()}";
         public string SelectedDayLockedText => $"{TotalLockedTimeToday.ToHoursMinutes()}";
 
@@ -2222,11 +2336,50 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
+        public TimeSpan WeeklyLeaveDuration
+        {
+            get => _weeklyLeaveDuration;
+            private set
+            {
+                if (_weeklyLeaveDuration != value)
+                {
+                    _weeklyLeaveDuration = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public string WeeklyTrackedActiveText => $"{WeeklyTrackedActiveDuration.ToHoursMinutes()}";
         public string WeeklyManualText => $"{WeeklyManualDuration.ToHoursMinutes()}";
+        public string WeeklyLeaveDurationText => $"{WeeklyLeaveDuration.ToHoursMinutes()}";
         public string WeeklyTotalActiveText => $"{WeeklyTotalActiveDuration.ToHoursMinutes()}";
         public string WeeklyTotalIdleText => $"{WeeklyTotalIdleDuration.ToHoursMinutes()}";
         public string WeeklyTotalLockedText => $"{WeeklyTotalLockedDuration.ToHoursMinutes()}";
+
+        // ── New unified week panel properties (used in UIAShell sidebar) ─────────────
+
+        // Active = tracked + manual (all actual work).
+        public string WeekActiveText =>
+            (WeeklyTrackedActiveDuration + WeeklyManualDuration).ToHoursMinutes();
+
+        public string WeekLeaveHoursText => WeeklyLeaveDuration.ToHoursMinutes();
+
+        // TotalActive = Active + Leave.
+        public string WeekTotalActiveText => WeeklyTotalActiveDuration.ToHoursMinutes();
+
+        public string WeekStatusText
+        {
+            get
+            {
+                var summary = new HoursCalculationHelper.PeriodHoursSummary
+                {
+                    Expected = _weekExpectedHours,
+                    Active = WeeklyTrackedActiveDuration + WeeklyManualDuration,
+                    Leave = WeeklyLeaveDuration
+                };
+                return summary.StatusText;
+            }
+        }
 
         private void SaveSettings()
         {
@@ -2792,13 +2945,16 @@ namespace SystemActivityTracker.ViewModels
         {
             var (active, idle, locked) = GetActivityTotalsForDate(date);
             var manual = TimeSpan.FromSeconds(GetManualSecondsForDate(date));
+            var leaveEntry = _leaveService.GetForDate(date.Date);
+            var leaveCredit = ExpectedHoursCalculator.GetDayLeaveCredit(date, leaveEntry?.Duration);
             return new DailySummary
             {
                 Date = date.Date,
                 ActiveDuration = active,
                 ManualTaskDuration = manual,
                 IdleDuration = idle,
-                LockedDuration = locked
+                LockedDuration = locked,
+                LeaveCredit = leaveCredit
             };
         }
 
@@ -2826,22 +2982,31 @@ namespace SystemActivityTracker.ViewModels
 
             var (active, idle, locked) = GetActivityTotalsForDate(normalized);
             var manual = TimeSpan.FromSeconds(GetManualSecondsForDate(normalized));
-            summary.SetDurations(active, manual, idle, locked);
+            var leaveEntry = _leaveService.GetForDate(normalized);
+            var leaveCredit = ExpectedHoursCalculator.GetDayLeaveCredit(normalized, leaveEntry?.Duration);
+            summary.SetDurations(active, manual, idle, locked, leaveCredit);
         }
 
         private void RecalculateWeeklyTotals()
         {
             WeeklyTrackedActiveDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.ActiveDuration.Ticks));
             WeeklyManualDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.ManualTaskDuration.Ticks));
-            WeeklyTotalActiveDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.TotalActiveDuration.Ticks));
+            WeeklyLeaveDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.LeaveCredit.Ticks));
+            // Explicit formula mirrors monthly: tracked + manual + leave.
+            WeeklyTotalActiveDuration = WeeklyTrackedActiveDuration + WeeklyManualDuration + WeeklyLeaveDuration;
             WeeklyTotalIdleDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.IdleDuration.Ticks));
             WeeklyTotalLockedDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.LockedDuration.Ticks));
 
             OnPropertyChanged(nameof(WeeklyTrackedActiveText));
             OnPropertyChanged(nameof(WeeklyManualText));
+            OnPropertyChanged(nameof(WeeklyLeaveDurationText));
             OnPropertyChanged(nameof(WeeklyTotalActiveText));
             OnPropertyChanged(nameof(WeeklyTotalIdleText));
             OnPropertyChanged(nameof(WeeklyTotalLockedText));
+            OnPropertyChanged(nameof(WeekActiveText));
+            OnPropertyChanged(nameof(WeekLeaveHoursText));
+            OnPropertyChanged(nameof(WeekTotalActiveText));
+            OnPropertyChanged(nameof(WeekStatusText));
 
             if (!IsSelectedWeekInFuture)
             {

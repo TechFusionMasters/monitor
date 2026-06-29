@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>SystemActivityTracker</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.7.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Include only the pure-logic files that have no WPF dependencies. -->
+  <ItemGroup>
+    <Compile Include="..\Operon\Models\LeaveDuration.cs" Link="Models\LeaveDuration.cs"/>
+    <Compile Include="..\Operon\Models\LeaveType.cs" Link="Models\LeaveType.cs"/>
+    <Compile Include="..\Operon\Services\Abstractions\ActivityLogEntry.cs" Link="Services\ActivityLogEntry.cs"/>
+    <Compile Include="..\Operon\Utilities\WorkWeekHelper.cs" Link="Utilities\WorkWeekHelper.cs"/>
+    <Compile Include="..\Operon\Utilities\ExpectedHoursCalculator.cs" Link="Utilities\ExpectedHoursCalculator.cs"/>
+    <Compile Include="..\Operon\Utilities\HoursCalculationHelper.cs" Link="Utilities\HoursCalculationHelper.cs"/>
+  </ItemGroup>
+
+</Project>

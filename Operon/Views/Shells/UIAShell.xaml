@@ -221,6 +221,8 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Started" FontSize="13" Margin="0,3,12,3"/>
@@ -231,30 +233,37 @@
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedDayEndText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Leave" FontSize="13" Margin="0,3,12,3"
-                                           Visibility="{Binding HasSelectedDayLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedDayLeaveSummaryText}" FontSize="13" Margin="0,3,0,3"
-                                           HorizontalAlignment="Left"
-                                           Visibility="{Binding HasSelectedDayLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Expected" FontSize="13" FontWeight="SemiBold" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedDayExpectedHoursText}" FontSize="13" FontWeight="SemiBold" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"/>
 
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedDayActiveTrackedText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedDayActiveText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Manual" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedDayManualTasksText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Leave" FontSize="13" Margin="0,3,12,3"
+                                           Visibility="{Binding HasSelectedDayLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Vertical"
+                                            Visibility="{Binding HasSelectedDayLeave, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding SelectedDayLeaveHoursText}" FontSize="13" Margin="0,3,0,0" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="{Binding SelectedDayLeaveSummaryText}" FontSize="11" Margin="0,0,0,3"
+                                               HorizontalAlignment="Left" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Total Active" FontSize="13" FontWeight="SemiBold" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedDayTotalActiveText}" FontSize="13" FontWeight="SemiBold" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Total Active" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedDayTotalActiveText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Status" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedDayStatusText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left" Foreground="#059669"/>
+
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="Idle" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding SelectedDayIdleText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Idle" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedDayIdleText}" FontSize="13" Margin="0,3,0,3"
-                                           HorizontalAlignment="Left"/>
-
-                                <TextBlock Grid.Row="7" Grid.Column="0" Text="Locked" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding SelectedDayLockedText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="8" Grid.Column="0" Text="Locked" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedDayLockedText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
                             </Grid>
 
@@ -431,26 +440,38 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeeklyTrackedActiveText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Expected" FontSize="13" FontWeight="SemiBold" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeekExpectedHoursText}" FontSize="13" FontWeight="SemiBold" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Manual" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WeeklyManualText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Active" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WeekActiveText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Total Active" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding WeeklyTotalActiveText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Leave" FontSize="13" Margin="0,3,12,3"
+                                           Visibility="{Binding HasWeekLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding WeekLeaveHoursText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left"
+                                           Visibility="{Binding HasWeekLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Total Active" FontSize="13" FontWeight="SemiBold" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding WeekTotalActiveText}" FontSize="13" FontWeight="SemiBold" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Total Idle" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding WeeklyTotalIdleText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Status" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding WeekStatusText}" FontSize="13" Margin="0,3,0,3"
+                                           HorizontalAlignment="Left" Foreground="#059669"/>
+
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Total Idle" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding WeeklyTotalIdleText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Total Locked" FontSize="13" Margin="0,3,12,3"/>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding WeeklyTotalLockedText}" FontSize="13" Margin="0,3,0,3"
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="Total Locked" FontSize="13" Margin="0,3,12,3"/>
+                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding WeeklyTotalLockedText}" FontSize="13" Margin="0,3,0,3"
                                            HorizontalAlignment="Left"/>
                             </Grid>
                         </StackPanel>

@@ -590,10 +590,15 @@
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                                     <TextBlock Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Expected:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding MonthlyExpectedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0" FontWeight="SemiBold"/>
                                         <TextBlock Text="Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Total Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding MonthlyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Text="{Binding MonthlyActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
+                                        <TextBlock Text="Leave:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
+                                        <TextBlock Text="Total Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding MonthlyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding MonthlyStatusText}" Style="{StaticResource SecondaryTextStyle}" Foreground="#059669"/>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -786,6 +791,27 @@
                                                                        HorizontalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Grid>
+
+                                                    <!-- Today wave accent — 2-cycle sine strip at bottom of tile -->
+                                                    <Path Grid.RowSpan="2"
+                                                          VerticalAlignment="Bottom"
+                                                          Width="132" Height="8"
+                                                          Stretch="Fill"
+                                                          Data="M 0,4 C 8,0 25,0 33,4 C 41,8 58,8 66,4 C 74,0 91,0 99,4 C 107,8 124,8 132,4 L 132,8 L 0,8 Z"
+                                                          Fill="#3B82F6"
+                                                          Opacity="0.30"
+                                                          IsHitTestVisible="False">
+                                                        <Path.Style>
+                                                            <Style TargetType="Path">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Path.Style>
+                                                    </Path>
                                                 </Grid>
                                                 </Viewbox>
                                             </Border>
@@ -1574,6 +1600,21 @@
                                             </Style>
                                         </DataGridTextColumn.CellStyle>
                                     </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Leave" Binding="{Binding LeaveCreditText, Mode=OneWay}" Width="1*" SortMemberPath="LeaveCredit">
+                                        <DataGridTextColumn.HeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}">
+                                                <Setter Property="Background" Value="#E0F2E9"/>
+                                                <Setter Property="BorderThickness" Value="0,1,0,0"/>
+                                                <Setter Property="BorderBrush" Value="#A5D6A7"/>
+                                                <Setter Property="Padding" Value="8,6"/>
+                                            </Style>
+                                        </DataGridTextColumn.HeaderStyle>
+                                        <DataGridTextColumn.CellStyle>
+                                            <Style TargetType="DataGridCell" BasedOn="{StaticResource UIADataGridCellStyle}">
+                                                <Setter Property="Background" Value="#E8F5EB"/>
+                                            </Style>
+                                        </DataGridTextColumn.CellStyle>
+                                    </DataGridTextColumn>
                                     <DataGridTextColumn Header="Total Active" Binding="{Binding TotalActiveDurationText, Mode=OneWay}" Width="1*" SortMemberPath="TotalActiveDuration">
                                         <DataGridTextColumn.HeaderStyle>
                                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}">
@@ -1600,9 +1641,13 @@
                         <Grid Grid.Row="2" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
@@ -1612,10 +1657,10 @@
                                         <ColumnDefinition Width="6"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{StaticResource SuccessBrush}" CornerRadius="6,0,0,6"/>
-                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
-                                        <TextBlock Text="Total Active" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding WeeklyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    <Border Grid.Column="0" Background="#6B7280" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center">
+                                        <TextBlock Text="Expected" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeekExpectedHoursText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -1626,10 +1671,10 @@
                                         <ColumnDefinition Width="6"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{StaticResource BorderBrush}" CornerRadius="6,0,0,6"/>
-                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
-                                        <TextBlock Text="Idle" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    <Border Grid.Column="0" Background="#2563EB" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center">
+                                        <TextBlock Text="Active" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeekActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -1640,10 +1685,39 @@
                                         <ColumnDefinition Width="6"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{StaticResource ErrorBrush}" CornerRadius="6,0,0,6"/>
-                                    <StackPanel Grid.Column="1" Margin="14" VerticalAlignment="Center">
-                                        <TextBlock Text="Locked" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding WeeklyTotalLockedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,6,0,0"/>
+                                    <Border Grid.Column="0" Background="#F59E0B" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center">
+                                        <TextBlock Text="Leave" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeekLeaveHoursText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="6" Style="{StaticResource CardStyle}" Padding="0" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource SuccessBrush}" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center">
+                                        <TextBlock Text="Total Active" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeekTotalActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding WeekStatusText}" FontSize="11" Foreground="#059669" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="8" Style="{StaticResource CardStyle}" Padding="0" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="6"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{StaticResource BorderBrush}" CornerRadius="6,0,0,6"/>
+                                    <StackPanel Grid.Column="1" Margin="12,10" VerticalAlignment="Center">
+                                        <TextBlock Text="Idle" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding WeeklyTotalIdleText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
