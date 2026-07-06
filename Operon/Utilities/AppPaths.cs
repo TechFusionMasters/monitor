@@ -52,6 +52,14 @@ namespace SystemActivityTracker.Utilities
             return Path.Combine(GetAppFolder(), fileName);
         }
 
+        public static string GetHolidaysPath(int year)
+        {
+            string fileName = $"holidays-{year:0000}.json";
+            return Path.Combine(GetAppFolder(), fileName);
+        }
+
+        public static string GetAppCategoriesPath() => Path.Combine(GetAppFolder(), "app-categories.json");
+
         public static string GetActivityLogCsvPath(DateTime date)
         {
             string fileName = $"activity-log-{date:yyyy-MM-dd}.csv";

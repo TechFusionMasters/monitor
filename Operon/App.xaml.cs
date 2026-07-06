@@ -92,9 +92,31 @@ namespace SystemActivityTracker
             serviceCollection.AddSingleton<ICrashLogReader, CrashLogReader>();
             serviceCollection.AddTransient<ManualTaskService>();
             serviceCollection.AddTransient<LeaveService>();
+            serviceCollection.AddTransient<HolidayService>();
+            serviceCollection.AddTransient<AppCategoryService>();
 
             serviceCollection.AddTransient<LastCrashViewModel>(sp =>
                 new LastCrashViewModel(sp.GetRequiredService<ICrashLogReader>()));
+
+            serviceCollection.AddTransient<HolidaysViewModel>(sp =>
+                new HolidaysViewModel(sp.GetRequiredService<HolidayService>()));
+
+            serviceCollection.AddTransient<WorkSummaryViewModel>(sp =>
+                new WorkSummaryViewModel(
+                    sp.GetRequiredService<IActivityLogReader>(),
+                    sp.GetRequiredService<ManualTaskService>(),
+                    sp.GetRequiredService<LeaveService>(),
+                    sp.GetRequiredService<HolidayService>()));
+
+            serviceCollection.AddTransient<AppCategoriesViewModel>(sp =>
+                new AppCategoriesViewModel(
+                    sp.GetRequiredService<AppCategoryService>(),
+                    sp.GetRequiredService<IActivityLogReader>()));
+
+            serviceCollection.AddTransient<AppUsageBreakdownViewModel>(sp =>
+                new AppUsageBreakdownViewModel(
+                    sp.GetRequiredService<IActivityLogReader>(),
+                    sp.GetRequiredService<AppCategoryService>()));
 
             serviceCollection.AddTransient<MainWindowViewModel>(sp =>
                 new MainWindowViewModel(
@@ -103,7 +125,12 @@ namespace SystemActivityTracker
                     sp.GetRequiredService<IActivityLogReader>(),
                     sp.GetRequiredService<ManualTaskService>(),
                     sp.GetRequiredService<LeaveService>(),
-                    sp.GetRequiredService<LastCrashViewModel>()));
+                    sp.GetRequiredService<LastCrashViewModel>(),
+                    sp.GetRequiredService<HolidaysViewModel>(),
+                    sp.GetRequiredService<WorkSummaryViewModel>(),
+                    sp.GetRequiredService<AppCategoriesViewModel>(),
+                    sp.GetRequiredService<AppUsageBreakdownViewModel>(),
+                    sp.GetRequiredService<HolidayService>()));
 
             Services = serviceCollection.BuildServiceProvider();
 

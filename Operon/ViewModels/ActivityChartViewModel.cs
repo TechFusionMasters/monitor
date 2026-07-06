@@ -649,7 +649,7 @@ namespace SystemActivityTracker.ViewModels
             
             TooltipTotalActive = $"Total Active: {totalActiveWithManual.ToHoursMinutes()}";
             TooltipActive = $"Active (tracked): {TotalActiveTime.ToHoursMinutes()}";
-            TooltipManual = $"Manual: {ManualTasksDuration.ToHoursMinutes()}";
+            TooltipManual = $"Offline: {ManualTasksDuration.ToHoursMinutes()}";
             TooltipIdle = $"Idle: {IdleTime.ToHoursMinutes()}";
             TooltipLocked = $"Locked: {LockedTime.ToHoursMinutes()}";
         }
