@@ -8,9 +8,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="{DynamicResource AppTitle}" 
+        Title="{DynamicResource AppTitle}"
         MinHeight="600" MinWidth="800"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{StaticResource BackgroundBrush}"
+        MouseDown="Window_MouseDown"
+        PreviewKeyDown="Window_PreviewKeyDown">
     
 
     <Window.Resources>
@@ -589,45 +591,95 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                    <TextBlock Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,10"/>
+                                <!-- Compact 10-column single-row summary. No "Monthly Usage" header text —
+                                     this row is Height="Auto" above the calendar's Height="*" row, so every
+                                     bit of height saved here is handed straight to the calendar. Horizontal
+                                     ScrollViewer is a safety net only (no scrollbar appears unless the window
+                                     is narrower than the row needs) so nothing overlaps the month picker on
+                                     small windows instead of just clipping. -->
+                                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto"
+                                              VerticalAlignment="Center" HorizontalAlignment="Left">
+                                    <Grid VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/> <!-- 1: Expected Hours label + value -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 2: Expected Hours donut -->
+                                            <ColumnDefinition Width="16"/>   <!-- 3: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 4: Total Active Hours label + value -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 5: Total Active Hours legend -->
+                                            <ColumnDefinition Width="16"/>   <!-- 6: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 7: Status label + value -->
+                                            <ColumnDefinition Width="16"/>   <!-- 8: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 9: GIF indicator -->
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- WrapPanel so Donut 2 drops below Donut 1 instead of overflowing the
-                                         card on narrow windows. -->
-                                    <WrapPanel Orientation="Horizontal">
+                                        <!-- 1: Expected Hours — expected-hours value only (no completed/active
+                                             hours here; that lives in the Total Active Hours and Status columns). -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Expected Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding MonthlyExpectedText}" FontSize="15" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
 
-                                        <!-- Donut 1: Expected Hours Progress -->
-                                        <StackPanel Margin="0,4,32,10" HorizontalAlignment="Center">
-                                            <TextBlock Text="EXPECTED HOURS PROGRESS" Style="{StaticResource SecondaryTextStyle}"
-                                                       FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                        <!-- 2: Expected Hours donut -->
+                                        <Grid Grid.Column="1" Width="58" Height="58" VerticalAlignment="Center">
+                                            <controls:CircularProgressRing Progress="{Binding MonthlyProgressPercent}"
+                                                                            RingThickness="5" TrackBrush="#E5E7EB">
+                                                <controls:CircularProgressRing.Style>
+                                                    <Style TargetType="controls:CircularProgressRing">
+                                                        <Setter Property="ProgressBrush" Value="#F59E0B"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                                <Setter Property="ProgressBrush" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                                <Setter Property="ProgressBrush" Value="{StaticResource AccentBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </controls:CircularProgressRing.Style>
+                                            </controls:CircularProgressRing>
+                                            <TextBlock Text="{Binding MonthlyProgressPercentText}" FontSize="11" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </Grid>
 
-                                            <Grid Width="130" Height="130">
-                                                <controls:CircularProgressRing Progress="{Binding MonthlyProgressPercent}"
-                                                                                RingThickness="12" TrackBrush="#E5E7EB">
-                                                    <controls:CircularProgressRing.Style>
-                                                        <Style TargetType="controls:CircularProgressRing">
-                                                            <Setter Property="ProgressBrush" Value="#F59E0B"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                                    <Setter Property="ProgressBrush" Value="{StaticResource SuccessBrush}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                                    <Setter Property="ProgressBrush" Value="{StaticResource AccentBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </controls:CircularProgressRing.Style>
-                                                </controls:CircularProgressRing>
+                                        <!-- 3: gap (Grid.Column="2" is an empty spacer column) -->
 
-                                                <!-- Completed / Expected, e.g. "72h / 96h" — always shown, whichever state is active -->
-                                                <TextBlock Text="{Binding MonthlyProgressFractionText}" FontSize="16" FontWeight="Bold"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
-                                                           TextWrapping="Wrap" MaxWidth="88" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            </Grid>
+                                        <!-- 4: Total Active Hours -->
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Total Active Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            <!-- Total shown = Active + Offline + Leave (MonthlyTotalActiveText),
+                                                 matching the full sum of all three segments in the donut. -->
+                                            <TextBlock Text="{Binding MonthlyTotalActiveText}" FontSize="15" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
 
-                                            <!-- Exactly one of Remaining / Target Achieved / Worked More -->
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                                                <TextBlock Text="{Binding MonthlyStatusIcon}" FontSize="14" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <!-- 5: legend — compact color-chip rows; donut removed, legend now sits
+                                             directly beside the Total Active Hours value. -->
+                                        <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                <Border Width="7" Height="7" CornerRadius="2" Background="{StaticResource AccentBrush}" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
+                                                <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                                <Border Width="7" Height="7" CornerRadius="2" Background="#8B5CF6" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Offline" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
+                                                <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="7" Height="7" CornerRadius="2" Background="#F59E0B" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Leave" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
+                                                <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- 6: gap (Grid.Column="5" is an empty spacer column) -->
+
+                                        <!-- 7: Status — exactly one of Remaining / Achieved / Overworked -->
+                                        <StackPanel Grid.Column="6" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding MonthlyStatusIcon}" FontSize="10" Margin="0,0,4,0" VerticalAlignment="Center">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="#B45309"/>
@@ -642,9 +694,9 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Text="{Binding MonthlyStatusDetailText}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding MonthlyStatusLabel}" FontSize="9" FontWeight="SemiBold">
                                                     <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource SecondaryTextStyle}">
                                                             <Setter Property="Foreground" Value="#B45309"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
@@ -658,54 +710,36 @@
                                                     </TextBlock.Style>
                                                 </TextBlock>
                                             </StackPanel>
+                                            <TextBlock Text="{Binding MonthlyStatusDetailText}" FontSize="15" FontWeight="Bold" Margin="0,2,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#B45309"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
 
-                                        <!-- Donut 2: Total Active Hours breakdown (Active / Offline / Leave) -->
-                                        <StackPanel Margin="0,4,0,10" HorizontalAlignment="Center">
-                                            <TextBlock Text="TOTAL ACTIVE HOURS" Style="{StaticResource SecondaryTextStyle}"
-                                                       FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                        <!-- 8: gap (Grid.Column="7" is an empty spacer column) -->
 
-                                            <Grid Width="130" Height="130">
-                                                <controls:SegmentedDonutRing RingThickness="12" TrackBrush="#E5E7EB"
-                                                                              Value1="{Binding MonthlyActiveHoursValue}"
-                                                                              Value2="{Binding MonthlyOfflineHoursValue}"
-                                                                              Value3="{Binding MonthlyLeaveHoursValue}"
-                                                                              Brush1="{StaticResource AccentBrush}"
-                                                                              Brush2="#8B5CF6"
-                                                                              Brush3="#F59E0B"/>
-
-                                                <!-- Total Active Hours = Active + Offline only (Leave is shown as a
-                                                     segment for context but is not part of this total). -->
-                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding MonthlyActiveText}" FontSize="16" FontWeight="Bold"
-                                                               HorizontalAlignment="Center" TextAlignment="Center"
-                                                               TextWrapping="Wrap" MaxWidth="88" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                    <TextBlock Text="active + offline" FontSize="9" Style="{StaticResource SecondaryTextStyle}"
-                                                               HorizontalAlignment="Center" Margin="0,1,0,0"/>
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <!-- Legend: names never sit inside the donut itself -->
-                                            <StackPanel Margin="0,10,0,0">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                    <Border Width="9" Height="9" CornerRadius="2" Background="{StaticResource AccentBrush}" Margin="0,0,6,0"/>
-                                                    <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
-                                                    <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                                    <Border Width="9" Height="9" CornerRadius="2" Background="#8B5CF6" Margin="0,0,6,0"/>
-                                                    <TextBlock Text="Offline" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
-                                                    <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Border Width="9" Height="9" CornerRadius="2" Background="#F59E0B" Margin="0,0,6,0"/>
-                                                    <TextBlock Text="Leave" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
-                                                    <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </WrapPanel>
-                                </StackPanel>
+                                        <!-- 9: overall monthly progress GIF — separate from, and does not touch,
+                                             the per-day tile GIF (MonthlyDayItem.ActiveHoursGifKey) below. Capped
+                                             at 68px (barely taller than the Expected Hours donut) so it stays clearly
+                                             visible without pulling the whole row taller. Self-hides under 90%
+                                             progress via AnimatedGifImage's own GifKey handling. -->
+                                        <controls:AnimatedGifImage Grid.Column="8" GifKey="{Binding MonthlyProgressGifKey}"
+                                                                    Width="68" Height="68"
+                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                    IsHitTestVisible="False"/>
+                                    </Grid>
+                                </ScrollViewer>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock Text="Month:" Style="{StaticResource BodyTextStyle}"
@@ -739,7 +773,10 @@
                                 <ItemsControl Grid.Row="1" ItemsSource="{Binding MonthlyCalendarDays}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <UniformGrid Columns="8" Rows="6"/>
+                                            <!-- Rows is bound to the actual week count for the selected month (4/5/6),
+                                                 not hardcoded to 6 — a 5-week month would otherwise reserve an empty
+                                                 6th row's worth of height that could instead go to the real rows. -->
+                                            <UniformGrid Columns="8" Rows="{Binding MonthlyCalendarRowCount}"/>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
@@ -751,18 +788,43 @@
                                                 <!-- StretchDirection="Both" (not DownOnly): the tile — and the GIF badge inside
                                                      it — must be able to scale UP to fill a larger window/cell, not just
                                                      shrink on small ones, or the GIF stays capped at its tiny natural size
-                                                     no matter how big the calendar area gets. -->
+                                                     no matter how big the calendar area gets.
+
+                                                     Canvas is a square (150x150): tiles must keep a 1:1 aspect ratio and
+                                                     never stretch into rectangles, regardless of the grid cell's actual
+                                                     (usually wider-than-tall) shape — Viewbox's Uniform stretch scales
+                                                     this square canvas up/down as one block and letterboxes any leftover
+                                                     cell space evenly, rather than distorting the tile to fill it. -->
                                                 <Viewbox Stretch="Uniform" StretchDirection="Both" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                <Grid Width="132" Height="130">
+                                                <Grid Width="150" Height="150">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Leave indicator (modern chip, top-right) -->
+                                                    <!-- Leave indicator (modern chip, top-right) — regular day cells only.
+                                                         WeeklySummaryDayItem has no HasLeave/LeaveBadgeText properties, so a
+                                                         plain Visibility="{Binding HasLeave}" binding silently fails to resolve
+                                                         on summary cells and leaves this chip stuck at its default Visible
+                                                         state with empty text, rendering as a stray orange dot in every week's
+                                                         Summary column. The MultiDataTrigger below requires IsWeeklySummary=False
+                                                         explicitly, so summary cells stay Collapsed regardless of that. -->
                                                     <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"
-                                                            Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2"
-                                                            Visibility="{Binding HasLeave, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                            Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <MultiDataTrigger>
+                                                                        <MultiDataTrigger.Conditions>
+                                                                            <Condition Binding="{Binding IsWeeklySummary}" Value="False"/>
+                                                                            <Condition Binding="{Binding HasLeave}" Value="True"/>
+                                                                        </MultiDataTrigger.Conditions>
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </MultiDataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
                                                         <Border.Effect>
                                                             <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
                                                         </Border.Effect>
@@ -858,6 +920,7 @@
                                                                         <Style.Triggers>
                                                                             <MultiDataTrigger>
                                                                                 <MultiDataTrigger.Conditions>
+                                                                                    <Condition Binding="{Binding DataContext.IsCurrentMonth, RelativeSource={RelativeSource AncestorType=Border}}" Value="True"/>
                                                                                     <Condition Binding="{Binding DataContext.IsFuture, RelativeSource={RelativeSource AncestorType=Border}}" Value="False"/>
                                                                                     <Condition Binding="{Binding DataContext.HasChart, RelativeSource={RelativeSource AncestorType=Border}}" Value="True"/>
                                                                                 </MultiDataTrigger.Conditions>
@@ -908,6 +971,7 @@
                                                                     Visibility="{Binding IsWeeklySummary, Converter={StaticResource BoolToVisibilityConverter}}">
                                                             <TextBlock Text="{Binding TotalActiveText}"
                                                                        FontWeight="Bold"
+                                                                       FontSize="20"
                                                                        Foreground="#10B981"
                                                                        Style="{StaticResource SecondaryTextStyle}"
                                                                        HorizontalAlignment="Center"/>

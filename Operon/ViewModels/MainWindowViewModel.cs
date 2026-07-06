@@ -962,6 +962,26 @@ namespace SystemActivityTracker.ViewModels
         public ObservableCollection<CalendarDayItemBase> MonthlyCalendarDays => _monthlyCalendarDays;
         public ObservableCollection<WeeklySummaryItem> MonthlyWeeklySummaries => _monthlyWeeklySummaries;
 
+        private int _monthlyCalendarRowCount = 6;
+
+        // Actual number of Monday–Sunday week rows in the selected month's calendar grid
+        // (4, 5, or 6 depending on the month) — drives the calendar UniformGrid's Rows so
+        // a 5-week month doesn't reserve a wasted, mostly-empty 6th row's worth of height.
+        public int MonthlyCalendarRowCount
+        {
+            get => _monthlyCalendarRowCount;
+            private set
+            {
+                if (_monthlyCalendarRowCount == value)
+                {
+                    return;
+                }
+
+                _monthlyCalendarRowCount = value;
+                OnPropertyChanged(nameof(MonthlyCalendarRowCount));
+            }
+        }
+
         public bool IsMonthlyUsageEmpty
         {
             get => _isMonthlyUsageEmpty;
@@ -1406,6 +1426,9 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyActiveHoursValue));
             OnPropertyChanged(nameof(MonthlyOfflineHoursValue));
             OnPropertyChanged(nameof(MonthlyLeaveHoursValue));
+            OnPropertyChanged(nameof(MonthlyProgressPercentRaw));
+            OnPropertyChanged(nameof(MonthlyProgressGifKey));
+            OnPropertyChanged(nameof(HasMonthlyProgressGif));
         }
 
         private void NotifyMonthHeaderTotalsChanged()
@@ -1427,6 +1450,9 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyActiveHoursValue));
             OnPropertyChanged(nameof(MonthlyOfflineHoursValue));
             OnPropertyChanged(nameof(MonthlyLeaveHoursValue));
+            OnPropertyChanged(nameof(MonthlyProgressPercentRaw));
+            OnPropertyChanged(nameof(MonthlyProgressGifKey));
+            OnPropertyChanged(nameof(HasMonthlyProgressGif));
         }
 
         /// <summary>
@@ -1734,6 +1760,7 @@ namespace SystemActivityTracker.ViewModels
             var end = start.AddMonths(1).AddDays(-1);
 
             var (calendarStart, calendarEnd) = WorkWeekHelper.GetMonthCalendarGridRange(_selectedYear, _selectedMonth);
+            MonthlyCalendarRowCount = (int)((calendarEnd - calendarStart).TotalDays + 1) / 7;
 
             var perProcess = new System.Collections.Generic.Dictionary<string, (TimeSpan Active, TimeSpan Idle, TimeSpan Locked)>(StringComparer.OrdinalIgnoreCase);
 
@@ -2035,9 +2062,9 @@ namespace SystemActivityTracker.ViewModels
 
         public string MonthlyStatusLabel => MonthlyStatusKind switch
         {
-            "RemainingWork" => "Remaining",
-            "ExtraWorked" => "Worked More",
-            _ => "Target Achieved"
+            "RemainingWork" => "Needed",
+            "ExtraWorked" => "Overworked",
+            _ => "Achieved"
         };
 
         // Simple glyph paired with the status banner's color — plain Unicode (not an
@@ -2050,8 +2077,12 @@ namespace SystemActivityTracker.ViewModels
             _ => "✓" // checkmark
         };
 
-        // 0-100, clamped — drives the donut ring's fill and the big percentage readout.
+        // 0-100 — drives the donut ring's fill and the big percentage readout.
         // Progress = Total Active Hours (tracked + manual) + Leave, same as MonthlyStatusKind.
+        //
+        // Only ever returns exactly 100 when progress >= expected (a precise TimeSpan/tick
+        // comparison, not a rounded-hours one). Otherwise this is the true ratio (no
+        // artificial cap) — e.g. 175h33m/176h is exactly 99.74, not rounded/forced to 100.
         public double MonthlyProgressPercent
         {
             get
@@ -2066,11 +2097,63 @@ namespace SystemActivityTracker.ViewModels
                     return progress > TimeSpan.Zero ? 100.0 : 0.0;
                 }
 
-                return Math.Clamp(progress.TotalSeconds / expected.TotalSeconds * 100.0, 0.0, 100.0);
+                if (progress >= expected)
+                {
+                    return 100.0;
+                }
+
+                var ratio = progress.TotalSeconds / expected.TotalSeconds * 100.0;
+                return Math.Clamp(ratio, 0.0, 100.0);
             }
         }
 
-        public string MonthlyProgressPercentText => $"{MonthlyProgressPercent:0}%";
+        // Up to 2 decimal places (trailing zeros trimmed) so a near-complete month reads
+        // as e.g. "99.74%" instead of rounding to a misleading "100%"; only shows the bare
+        // "100%" once MonthlyProgressPercent itself is exactly 100 (progress >= expected).
+        public string MonthlyProgressPercentText =>
+            MonthlyProgressPercent >= 100.0 ? "100%" : $"{MonthlyProgressPercent:0.##}%";
+
+        // Same Progress/Expected comparison as MonthlyProgressPercent, but NOT clamped
+        // at 100 — the donut's fill percentage is intentionally capped for display, but
+        // the monthly GIF indicator needs to tell 100-110% apart from >110%, which a
+        // clamped value can't represent.
+        public double MonthlyProgressPercentRaw
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var expected = GetMonthlyExpectedHoursAdjusted();
+                var progress = tracked + manual + _monthLeaveCredit;
+
+                if (expected <= TimeSpan.Zero)
+                {
+                    return 0.0;
+                }
+
+                return progress.TotalSeconds / expected.TotalSeconds * 100.0;
+            }
+        }
+
+        // Monthly overview GIF, next to the summary (distinct from the per-day tile GIF
+        // logic in MonthlyDayItem.ActiveHoursGifKey, which this does not touch):
+        //   [90, 100)  -> TowardsTarget
+        //   [100, 110] -> ReachedTarget
+        //   (110, ∞)   -> OverBurned
+        //   below 90   -> none
+        public string? MonthlyProgressGifKey
+        {
+            get
+            {
+                var percent = MonthlyProgressPercentRaw;
+                if (percent >= 90.0 && percent < 100.0) return "TowardsTarget";
+                if (percent >= 100.0 && percent <= 110.0) return "ReachedTarget";
+                if (percent > 110.0) return "OverBurned";
+                return null;
+            }
+        }
+
+        public bool HasMonthlyProgressGif => MonthlyProgressGifKey != null;
 
         // Donut 1's center label — always "completed / expected" (e.g. "72h / 96h"),
         // regardless of which state is active. Same Progress/Expected values as
@@ -2094,6 +2177,9 @@ namespace SystemActivityTracker.ViewModels
         //   Target Achieved  -> "Target Achieved" (the 72h/96h fraction is already
         //                        equal, so no extra hours are repeated here)
         //   Worked More      -> "Worked More: +Xh Ym"
+        // Bare hours value — no "Remaining:"/"Worked More:" text, since the summary's
+        // status column shows MonthlyStatusLabel ("Remaining"/"Achieved"/"Overworked")
+        // above this as its own line.
         public string MonthlyStatusDetailText
         {
             get
@@ -2106,9 +2192,9 @@ namespace SystemActivityTracker.ViewModels
 
                 return MonthlyStatusKind switch
                 {
-                    "RemainingWork" => $"Remaining: {FormatHoursShort(-diff)}",
-                    "ExtraWorked" => $"Worked More: +{FormatHoursShort(diff)}",
-                    _ => "Target Achieved"
+                    "RemainingWork" => FormatHoursShort(-diff),
+                    "ExtraWorked" => $"+{FormatHoursShort(diff)}",
+                    _ => $"{FormatHoursShort(progress)} / {FormatHoursShort(expected)}"
                 };
             }
         }

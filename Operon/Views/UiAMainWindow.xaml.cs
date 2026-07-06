@@ -309,6 +309,33 @@ namespace SystemActivityTracker.Views
             }
         }
 
+        // Bubbling MouseDown: clicks on the bar/text that owns the pinned tooltip are
+        // already marked e.Handled=true by OnActivityBarClick/OnTotalActiveClick, so this
+        // never fires for those (their own toggle logic manages open/close instead) — only
+        // clicks elsewhere in the window reach here and close the pinned tooltip.
+        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            CloseActiveTooltip();
+        }
+
+        private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape && _activeTooltip != null)
+            {
+                CloseActiveTooltip();
+                e.Handled = true;
+            }
+        }
+
+        private void CloseActiveTooltip()
+        {
+            if (_activeTooltip != null)
+            {
+                _activeTooltip.IsOpen = false;
+                _activeTooltip = null;
+            }
+        }
+
         #endregion
 
         /// <summary>
