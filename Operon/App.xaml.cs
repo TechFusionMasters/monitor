@@ -129,7 +129,8 @@ namespace SystemActivityTracker
                     sp.GetRequiredService<HolidaysViewModel>(),
                     sp.GetRequiredService<WorkSummaryViewModel>(),
                     sp.GetRequiredService<AppCategoriesViewModel>(),
-                    sp.GetRequiredService<AppUsageBreakdownViewModel>()));
+                    sp.GetRequiredService<AppUsageBreakdownViewModel>(),
+                    sp.GetRequiredService<HolidayService>()));
 
             Services = serviceCollection.BuildServiceProvider();
 

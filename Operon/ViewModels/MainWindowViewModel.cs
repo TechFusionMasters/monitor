@@ -270,6 +270,7 @@ namespace SystemActivityTracker.ViewModels
         private readonly IActivityLogReader _activityLogReader;
         private readonly ManualTaskService _manualTaskService;
         private readonly LeaveService _leaveService;
+        private readonly HolidayService _holidayService;
         private string _trackingStatus = GetString("TrackingStatusStopped", "Tracking status: Stopped");
         private TimeSpan _totalActiveTimeToday;
         private TimeSpan _totalIdleTimeToday;
@@ -391,13 +392,15 @@ namespace SystemActivityTracker.ViewModels
             HolidaysViewModel? holidaysViewModel = null,
             WorkSummaryViewModel? workSummaryViewModel = null,
             AppCategoriesViewModel? appCategoriesViewModel = null,
-            AppUsageBreakdownViewModel? appUsageBreakdownViewModel = null)
+            AppUsageBreakdownViewModel? appUsageBreakdownViewModel = null,
+            HolidayService? holidayService = null)
         {
             _trackingService = trackingService;
             _settingsService = settingsService;
             _activityLogReader = activityLogReader ?? new ActivityLogReader();
             _manualTaskService = manualTaskService ?? new ManualTaskService();
             _leaveService = leaveService ?? new LeaveService();
+            _holidayService = holidayService ?? new HolidayService();
 
             LastCrash = lastCrashViewModel ?? new LastCrashViewModel();
             Holidays = holidaysViewModel ?? new HolidaysViewModel();
@@ -1680,6 +1683,8 @@ namespace SystemActivityTracker.ViewModels
             var monthLeaves = _leaveService.LoadMonth(_selectedYear, _selectedMonth);
             var leaveByDate = monthLeaves.ToDictionary(l => l.Date.Date);
 
+            var holidayDates = new System.Collections.Generic.HashSet<DateTime>(_holidayService.LoadYear(_selectedYear).Select(h => h.Date.Date));
+
             var start = new DateTime(_selectedYear, _selectedMonth, 1);
             var end = start.AddMonths(1).AddDays(-1);
 
@@ -1783,6 +1788,8 @@ namespace SystemActivityTracker.ViewModels
                         dayItem.LeaveDuration = leaveEntry.Duration;
                         dayItem.LeaveType = leaveEntry.Type;
                     }
+
+                    dayItem.IsHoliday = holidayDates.Contains(date.Date);
 
                     dayItem.ApplyActivityData(activeTime, idleTime, lockedTime, manualTime, hasManualTasks);
                 }
