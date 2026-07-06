@@ -592,142 +592,119 @@
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                                     <TextBlock Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,10"/>
 
-                                    <!-- WrapPanel so the stat column drops below the ring instead of
-                                         overflowing the card on narrow windows. -->
+                                    <!-- WrapPanel so Donut 2 drops below Donut 1 instead of overflowing the
+                                         card on narrow windows. -->
                                     <WrapPanel Orientation="Horizontal">
-                                        <!-- Progress ring: percent-of-Expected-Hours + status, all in one glance -->
-                                        <Grid Width="108" Height="108" Margin="0,4,20,4">
-                                            <controls:CircularProgressRing Progress="{Binding MonthlyProgressPercent}"
-                                                                            RingThickness="10" TrackBrush="#E5E7EB">
-                                                <controls:CircularProgressRing.Style>
-                                                    <Style TargetType="controls:CircularProgressRing">
-                                                        <Setter Property="ProgressBrush" Value="#F59E0B"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                                <Setter Property="ProgressBrush" Value="{StaticResource SuccessBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                                <Setter Property="ProgressBrush" Value="{StaticResource AccentBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </controls:CircularProgressRing.Style>
-                                            </controls:CircularProgressRing>
 
-                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding MonthlyProgressPercentText}" FontSize="24" FontWeight="Bold"
-                                                           HorizontalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="of target" FontSize="9" Style="{StaticResource SecondaryTextStyle}"
-                                                           HorizontalAlignment="Center" Margin="0,1,0,0"/>
+                                        <!-- Donut 1: Expected Hours Progress -->
+                                        <StackPanel Margin="0,4,32,10" HorizontalAlignment="Center">
+                                            <TextBlock Text="EXPECTED HOURS PROGRESS" Style="{StaticResource SecondaryTextStyle}"
+                                                       FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                                            <Grid Width="130" Height="130">
+                                                <controls:CircularProgressRing Progress="{Binding MonthlyProgressPercent}"
+                                                                                RingThickness="12" TrackBrush="#E5E7EB">
+                                                    <controls:CircularProgressRing.Style>
+                                                        <Style TargetType="controls:CircularProgressRing">
+                                                            <Setter Property="ProgressBrush" Value="#F59E0B"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                                    <Setter Property="ProgressBrush" Value="{StaticResource SuccessBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                                    <Setter Property="ProgressBrush" Value="{StaticResource AccentBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </controls:CircularProgressRing.Style>
+                                                </controls:CircularProgressRing>
+
+                                                <!-- Completed / Expected, e.g. "72h / 96h" — always shown, whichever state is active -->
+                                                <TextBlock Text="{Binding MonthlyProgressFractionText}" FontSize="16" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                                                           TextWrapping="Wrap" MaxWidth="88" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </Grid>
+
+                                            <!-- Exactly one of Remaining / Target Achieved / Worked More -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                                <TextBlock Text="{Binding MonthlyStatusIcon}" FontSize="14" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#B45309"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding MonthlyStatusDetailText}" FontSize="13" FontWeight="Bold" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#B45309"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
                                             </StackPanel>
-                                        </Grid>
+                                        </StackPanel>
 
-                                        <!-- Stat rows -->
-                                        <StackPanel VerticalAlignment="Center" MinWidth="200" Margin="0,4,0,4">
-                                            <Grid Margin="0,0,0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="84"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Expected" Style="{StaticResource SecondaryTextStyle}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding MonthlyExpectedText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
-                                            </Grid>
-                                            <Grid Margin="0,0,0,8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="84"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Leave" Style="{StaticResource SecondaryTextStyle}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding MonthlyLeaveText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                        <!-- Donut 2: Total Active Hours breakdown (Active / Offline / Leave) -->
+                                        <StackPanel Margin="0,4,0,10" HorizontalAlignment="Center">
+                                            <TextBlock Text="TOTAL ACTIVE HOURS" Style="{StaticResource SecondaryTextStyle}"
+                                                       FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+                                            <Grid Width="130" Height="130">
+                                                <controls:SegmentedDonutRing RingThickness="12" TrackBrush="#E5E7EB"
+                                                                              Value1="{Binding MonthlyActiveHoursValue}"
+                                                                              Value2="{Binding MonthlyOfflineHoursValue}"
+                                                                              Value3="{Binding MonthlyLeaveHoursValue}"
+                                                                              Brush1="{StaticResource AccentBrush}"
+                                                                              Brush2="#8B5CF6"
+                                                                              Brush3="#F59E0B"/>
+
+                                                <!-- Total Active Hours = Active + Offline only (Leave is shown as a
+                                                     segment for context but is not part of this total). -->
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding MonthlyActiveText}" FontSize="16" FontWeight="Bold"
+                                                               HorizontalAlignment="Center" TextAlignment="Center"
+                                                               TextWrapping="Wrap" MaxWidth="88" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                    <TextBlock Text="active + offline" FontSize="9" Style="{StaticResource SecondaryTextStyle}"
+                                                               HorizontalAlignment="Center" Margin="0,1,0,0"/>
+                                                </StackPanel>
                                             </Grid>
 
-                                            <Grid Margin="0,0,0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="84"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="Total Active" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding MonthlyActiveText}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
-                                            </Grid>
-                                            <StackPanel Orientation="Horizontal" Margin="84,0,0,0">
-                                                <TextBlock Text="Active " Style="{StaticResource SecondaryTextStyle}" FontSize="10"/>
-                                                <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold" Margin="0,0,10,0"/>
-                                                <TextBlock Text="Offline " Style="{StaticResource SecondaryTextStyle}" FontSize="10"/>
-                                                <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold"/>
+                                            <!-- Legend: names never sit inside the donut itself -->
+                                            <StackPanel Margin="0,10,0,0">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                    <Border Width="9" Height="9" CornerRadius="2" Background="{StaticResource AccentBrush}" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
+                                                    <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                    <Border Width="9" Height="9" CornerRadius="2" Background="#8B5CF6" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="Offline" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
+                                                    <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Width="9" Height="9" CornerRadius="2" Background="#F59E0B" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="Leave" Style="{StaticResource SecondaryTextStyle}" Width="48"/>
+                                                    <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" FontWeight="SemiBold"/>
+                                                </StackPanel>
                                             </StackPanel>
                                         </StackPanel>
                                     </WrapPanel>
-
-                                    <!-- Status banner: the one thing on this card that should never require a
-                                         second look. Icon badge + label + hours all share the same state color,
-                                         and only one of Remaining / Target Achieved / Worked More is ever shown
-                                         (driven entirely by MonthlyStatusKind, which is unchanged this turn). -->
-                                    <Border CornerRadius="10" Padding="14,10" Margin="0,14,0,0" HorizontalAlignment="Stretch">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#FEF3C7"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                        <Setter Property="Background" Value="#D1FAE5"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                        <Setter Property="Background" Value="#DBEAFE"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Border Width="34" Height="34" CornerRadius="17" Margin="0,0,12,0">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="#F59E0B"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                                <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding MonthlyStatusIcon}" Foreground="White" FontSize="15" FontWeight="Bold"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding MonthlyStatusLabel}" FontSize="14" FontWeight="Bold">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#92400E"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                                    <Setter Property="Foreground" Value="#065F46"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                                    <Setter Property="Foreground" Value="#1E40AF"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Text="{Binding MonthlyStatusDetailText}" FontSize="13" FontWeight="SemiBold" Margin="0,1,0,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#92400E"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
-                                                                    <Setter Property="Foreground" Value="#065F46"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
-                                                                    <Setter Property="Foreground" Value="#1E40AF"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
