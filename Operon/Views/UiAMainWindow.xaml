@@ -4,6 +4,7 @@
         xmlns:conv="clr-namespace:SystemActivityTracker.Converters"
         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         xmlns:controls="clr-namespace:SystemActivityTracker.Controls"
+        xmlns:vm="clr-namespace:SystemActivityTracker.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -650,29 +651,45 @@
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Leave duration indicators (left edge overlay) -->
-                                                    <Grid Grid.RowSpan="2" Width="4" HorizontalAlignment="Left" Margin="1,4,0,4">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="*"/>
-                                                        </Grid.RowDefinitions>
-                                                        <Border Grid.RowSpan="2"
-                                                                Background="{StaticResource LeaveIndicatorBrush}"
-                                                                Visibility="{Binding HasFullDayLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                        <Border Grid.Row="0"
-                                                                Background="{StaticResource LeaveIndicatorBrush}"
-                                                                Visibility="{Binding HasMorningHalfLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                        <Border Grid.Row="1"
-                                                                Background="{StaticResource LeaveIndicatorBrush}"
-                                                                Visibility="{Binding HasAfternoonHalfLeave, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                    </Grid>
+                                                    <!-- Leave indicator (modern chip, top-right) -->
+                                                    <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"
+                                                            Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2"
+                                                            Visibility="{Binding HasLeave, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
+                                                        </Border.Effect>
+                                                        <TextBlock Text="{Binding LeaveBadgeText}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                    </Border>
 
-                                                    <!-- Date Number (only for regular days) -->
-                                                    <TextBlock Grid.Row="0" Text="{Binding Date, StringFormat={}{0:dd}}"
-                                                               FontWeight="SemiBold"
-                                                               Margin="4,4,0,0"
-                                                               HorizontalAlignment="Left"
-                                                               Visibility="{Binding IsWeeklySummary, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                                    <!-- Date Number (only for regular days) — filled accent circle marks today -->
+                                                    <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0"
+                                                            Width="22" Height="22" CornerRadius="11"
+                                                            Visibility="{Binding IsWeeklySummary, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="Transparent"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding Date, StringFormat={}{0:dd}}"
+                                                                   FontWeight="SemiBold"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                                            <Setter Property="Foreground" Value="White"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
 
                                                     <!-- Week Number (only for summary cells) -->
                                                     <TextBlock Grid.Row="0" Text="{Binding WeekNumber, StringFormat=W{0}}"
@@ -791,27 +808,6 @@
                                                                        HorizontalAlignment="Center"/>
                                                         </StackPanel>
                                                     </Grid>
-
-                                                    <!-- Today wave accent — 2-cycle sine strip at bottom of tile -->
-                                                    <Path Grid.RowSpan="2"
-                                                          VerticalAlignment="Bottom"
-                                                          Width="132" Height="8"
-                                                          Stretch="Fill"
-                                                          Data="M 0,4 C 8,0 25,0 33,4 C 41,8 58,8 66,4 C 74,0 91,0 99,4 C 107,8 124,8 132,4 L 132,8 L 0,8 Z"
-                                                          Fill="#3B82F6"
-                                                          Opacity="0.30"
-                                                          IsHitTestVisible="False">
-                                                        <Path.Style>
-                                                            <Style TargetType="Path">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Path.Style>
-                                                    </Path>
                                                 </Grid>
                                                 </Viewbox>
                                             </Border>
@@ -953,6 +949,85 @@
                                 </Setter.Value>
                             </Setter>
                         </Style>
+
+                        <!-- Flat, rounded progress bar for Work Summary -->
+                        <Style x:Key="WorkSummaryProgressBarStyle" TargetType="ProgressBar">
+                            <Setter Property="Height" Value="10"/>
+                            <Setter Property="Background" Value="#E5E7EB"/>
+                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ProgressBar">
+                                        <Border CornerRadius="5" Background="{TemplateBinding Background}">
+                                            <Grid x:Name="PART_Track" ClipToBounds="True">
+                                                <Border x:Name="PART_Indicator" CornerRadius="5" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left"/>
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                        <!-- Flat chevron toggle used to expand/collapse a usage tree row -->
+                        <Style x:Key="UsageTreeExpanderStyle" TargetType="ToggleButton">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent">
+                                            <TextBlock x:Name="Chevron" Text="&#9656;" FontSize="10" Foreground="#6B7280"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="Text" Value="&#9662;"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                        <!-- Flat TreeViewItem: no native indent guides/triangle, own row background,
+                             indentation via a margin on the nested ItemsPresenter. -->
+                        <Style x:Key="UsageTreeViewItemStyle" TargetType="TreeViewItem">
+                            <Setter Property="Padding" Value="4,3"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TreeViewItem">
+                                        <StackPanel>
+                                            <Border x:Name="RowBorder" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="16"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <ToggleButton Grid.Column="0" Width="16" Height="16" VerticalAlignment="Top" Margin="0,2,0,0"
+                                                                  Style="{StaticResource UsageTreeExpanderStyle}"
+                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                                  Visibility="{Binding HasChildren, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    <ContentPresenter Grid.Column="1" ContentSource="Header" HorizontalAlignment="Stretch"/>
+                                                </Grid>
+                                            </Border>
+                                            <ItemsPresenter x:Name="ItemsHost" Margin="16,0,0,0" Visibility="Collapsed"/>
+                                        </StackPanel>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsExpanded" Value="True">
+                                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="RowBorder" Property="Background" Value="#F3F4F6"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
                     </TabItem.Resources>
 
                     <Grid Margin="0,4,0,0">
@@ -962,61 +1037,361 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0" Padding="6">
+                        <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0" Padding="10" DataContext="{Binding AppUsageBreakdown}">
                             <Grid>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Text="Application Usage" Style="{StaticResource SectionHeaderTextStyle}"/>
+                                <!-- Header + view selector -->
+                                <StackPanel Grid.Row="0">
+                                    <TextBlock Text="Application Usage" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Content="Today" Margin="0,0,12,0"
+                                                     IsChecked="{Binding ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Today}"/>
+                                        <RadioButton Content="Week" Margin="0,0,12,0"
+                                                     IsChecked="{Binding ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Week}"/>
+                                        <RadioButton Content="Month" Margin="0,0,12,0"
+                                                     IsChecked="{Binding ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Month}"/>
+                                        <RadioButton Content="Custom"
+                                                     IsChecked="{Binding ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Custom}"/>
+                                    </StackPanel>
+                                </StackPanel>
 
-                                <DataGrid Grid.Row="1" ItemsSource="{Binding TodayAppUsage}" Style="{StaticResource UIADataGridStyle}"
-                                          VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0"
-                                          CanUserSortColumns="True"
-                                          IsReadOnly="True"
-                                          Visibility="Collapsed">
-                                    <DataGrid.ColumnHeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}"/>
-                                    </DataGrid.ColumnHeaderStyle>
-                                    <DataGrid.RowStyle>
-                                        <Style TargetType="DataGridRow" BasedOn="{StaticResource UIADataGridRowStyle}"/>
-                                    </DataGrid.RowStyle>
-                                    <DataGrid.CellStyle>
-                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource UIADataGridCellStyle}"/>
-                                    </DataGrid.CellStyle>
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="App / Process" Binding="{Binding ProcessName}" Width="2*" SortMemberPath="ProcessName">
-                                            <DataGridTextColumn.ElementStyle>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="TextWrapping" Value="Wrap"/>
-                                                </Style>
-                                            </DataGridTextColumn.ElementStyle>
-                                        </DataGridTextColumn>
-                                        <DataGridTextColumn Header="Active Time" Binding="{Binding ActiveDurationText, Mode=OneWay}" Width="1*" SortMemberPath="ActiveDuration"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <!-- Period navigation -->
+                                <Grid Grid.Row="1" Margin="0,10,0,0">
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsTodayView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay}" DisplayDateEnd="{Binding MaxSelectableDate}" Width="140"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsWeekView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding PreviousPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,6,0" ToolTip="Previous week">
+                                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <DatePicker SelectedDate="{Binding WeekPickerDate, Mode=TwoWay}" Width="120" Margin="0,0,6,0" ToolTip="Select any day in the week"/>
+                                        <Button Command="{Binding NextPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,8,0" ToolTip="Next week">
+                                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <TextBlock Text="{Binding WeekRangeLabel}" VerticalAlignment="Center" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsMonthView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding PreviousPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,6,0" ToolTip="Previous month">
+                                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <controls:MonthYearPicker SelectedMonthYear="{Binding MonthYear, Mode=TwoWay}" Margin="0,0,6,0"/>
+                                        <Button Command="{Binding NextPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" ToolTip="Next month">
+                                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsCustomView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <DatePicker SelectedDate="{Binding CustomStartDate, Mode=TwoWay}"
+                                                    DisplayDateEnd="{Binding MaxSelectableDate}" Width="115" Margin="0,0,6,0"/>
+                                        <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,6,0" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <DatePicker SelectedDate="{Binding CustomEndDate, Mode=TwoWay}"
+                                                    DisplayDateEnd="{Binding MaxSelectableDate}" Width="115"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Grid.Row="2" Margin="0,10,0,6" Style="{StaticResource SecondaryTextStyle}">
+                                    <Run Text="Total tracked: "/>
+                                    <Run Text="{Binding TotalActiveText, Mode=OneWay}" FontWeight="SemiBold"/>
+                                </TextBlock>
+
+                                <Grid Grid.Row="3">
+                                    <TreeView ItemsSource="{Binding RootCategories}"
+                                              BorderThickness="0" Background="Transparent"
+                                              ScrollViewer.CanContentScroll="True"
+                                              VirtualizingStackPanel.IsVirtualizing="True"
+                                              Visibility="{Binding HasData, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TreeView.ItemContainerStyle>
+                                            <Style TargetType="TreeViewItem" BasedOn="{StaticResource UsageTreeViewItemStyle}">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                            </Style>
+                                        </TreeView.ItemContainerStyle>
+                                        <TreeView.Resources>
+                                            <HierarchicalDataTemplate DataType="{x:Type vm:UsageTreeNode}" ItemsSource="{Binding Children}">
+                                                <Grid Margin="0,2,0,4">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <!-- Category / Application / Week / Day row -->
+                                                    <Grid Grid.Row="0" Visibility="{Binding IsSession, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="40"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Title}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding DurationText}" Style="{StaticResource SecondaryTextStyle}" Margin="8,0,0,0"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding PercentText}" Style="{StaticResource SecondaryTextStyle}"
+                                                                   Margin="8,0,0,0" HorizontalAlignment="Right"
+                                                                   Visibility="{Binding ShowPercentBar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                    </Grid>
+                                                    <ProgressBar Grid.Row="1" Height="6" Minimum="0" Maximum="100"
+                                                                 Value="{Binding PercentValue, Mode=OneWay}"
+                                                                 Style="{StaticResource WorkSummaryProgressBarStyle}"
+                                                                 Visibility="{Binding ShowPercentBar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                                    <!-- Session row -->
+                                                    <Grid Grid.Row="0" Visibility="{Binding IsSession, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Title}" Style="{StaticResource SecondaryTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding SessionStartText}" Style="{StaticResource SecondaryTextStyle}" Margin="8,0,0,0"/>
+                                                        <TextBlock Grid.Column="2" Text=" – " Style="{StaticResource SecondaryTextStyle}"/>
+                                                        <TextBlock Grid.Column="3" Text="{Binding SessionEndText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                                    </Grid>
+                                                </Grid>
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.Resources>
+                                    </TreeView>
+
+                                    <TextBlock Text="No application usage recorded for this period."
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Foreground="#9CA3AF" FontSize="14"
+                                               Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                </Grid>
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2" Margin="0" Padding="6">
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource CardStyle}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsDayDetailsMode}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
+                        <!-- Work Summary + Insights: stacked, clearly separated cards.
+                             Scrolls independently of the Application Usage tree so shorter
+                             windows never clip the Insights card below Work Summary. -->
+                        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+
+                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Header + view selector -->
+                                <StackPanel Grid.Row="0">
+                                    <TextBlock Text="Work Summary" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Content="Today" Margin="0,0,12,0"
+                                                     IsChecked="{Binding WorkSummary.ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Today}"/>
+                                        <RadioButton Content="Week" Margin="0,0,12,0"
+                                                     IsChecked="{Binding WorkSummary.ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Week}"/>
+                                        <RadioButton Content="Month" Margin="0,0,12,0"
+                                                     IsChecked="{Binding WorkSummary.ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Month}"/>
+                                        <RadioButton Content="Custom"
+                                                     IsChecked="{Binding WorkSummary.ViewMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Custom}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Period navigation (per view) -->
+                                <Grid Grid.Row="1" Margin="0,10,0,0">
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding WorkSummary.IsWeekView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding WorkSummary.PreviousPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,6,0" ToolTip="Previous week">
+                                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <DatePicker SelectedDate="{Binding WorkSummary.WeekPickerDate, Mode=TwoWay}" Width="120" Margin="0,0,6,0" ToolTip="Select any day in the week"/>
+                                        <Button Command="{Binding WorkSummary.NextPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,8,0" ToolTip="Next week">
+                                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <TextBlock Text="{Binding WorkSummary.WeekRangeLabel}" VerticalAlignment="Center" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding WorkSummary.IsMonthView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button Command="{Binding WorkSummary.PreviousPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" Margin="0,0,6,0" ToolTip="Previous month">
+                                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                        <controls:MonthYearPicker SelectedMonthYear="{Binding WorkSummary.MonthYear, Mode=TwoWay}" Margin="0,0,6,0"/>
+                                        <Button Command="{Binding WorkSummary.NextPeriodCommand}" Style="{StaticResource IconOnlyButtonStyle}" ToolTip="Next month">
+                                            <TextBlock Text="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Visibility="{Binding WorkSummary.IsCustomView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <DatePicker SelectedDate="{Binding WorkSummary.CustomStartDate, Mode=TwoWay}"
+                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate}" Width="115" Margin="0,0,6,0"/>
+                                        <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,6,0" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <DatePicker SelectedDate="{Binding WorkSummary.CustomEndDate, Mode=TwoWay}"
+                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate}" Width="115"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Expected hours + progress -->
+                                <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Expected Hours" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.ExpectedHoursText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <ProgressBar Value="{Binding WorkSummary.ProgressPercent}" Minimum="0" Maximum="100"
+                                                 Style="{StaticResource WorkSummaryProgressBarStyle}" Margin="0,6,0,0"/>
+                                </StackPanel>
+
+                                <!-- Hours breakdown -->
+                                <StackPanel Grid.Row="3" Margin="0,14,0,0">
+                                    <Grid Margin="0,0,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Total Active Hours" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.TotalActiveHoursText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Grid Margin="12,2,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Active Hours" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.ActiveHoursText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </Grid>
+                                    <Grid Margin="12,2,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Offline Work" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.OfflineWorkText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Leave Taken" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.LeaveTakenText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Public Holiday Hours" Style="{StaticResource SecondaryTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.PublicHolidayHoursText}" Style="{StaticResource SecondaryTextStyle}"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Weekend Work (informational)" Style="{StaticResource SecondaryTextStyle}" FontStyle="Italic"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding WorkSummary.WeekendWorkText}" Style="{StaticResource SecondaryTextStyle}" FontStyle="Italic"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Status -->
+                                <Border Grid.Row="4" Margin="0,14,0,0" CornerRadius="8" Padding="8,4" HorizontalAlignment="Left">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource TextSecondaryBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding WorkSummary.StatusKey}" Value="TargetAchieved">
+                                                    <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding WorkSummary.StatusKey}" Value="ExtraWorked">
+                                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding WorkSummary.StatusText}" Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+                                </Border>
+                            </Grid>
+                            </Border>
+
+                            <!-- Insights: small, summary-focused, follows Application Usage's selected period -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0" Padding="10" DataContext="{Binding AppUsageBreakdown}">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Insights" Style="{StaticResource SectionHeaderTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding PeriodLabel}" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Most Used Application" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedApplicationText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Most Used Category" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedCategoryText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Longest Session" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LongestSessionText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Peak Productivity Time" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding PeakProductivityTimeText}" Style="{StaticResource BodyTextStyle}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Average Session" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding AverageSessionDurationText}" Style="{StaticResource BodyTextStyle}"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Applications Used" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalApplicationsUsed}" Style="{StaticResource BodyTextStyle}"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Total Sessions" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalSessions}" Style="{StaticResource BodyTextStyle}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        </ScrollViewer>
                     </Grid>
                 </TabItem>
 
-                <!-- Manual Tasks Tab -->
-                <TabItem Header="Manual Tasks" Style="{StaticResource UIATabItemStyle}">
+                <!-- Offline Work Tab -->
+                <TabItem Header="Offline Work" Style="{StaticResource UIATabItemStyle}">
                     <TabItem.Resources>
                         <Style x:Key="WatermarkTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource UIATextBoxStyle}">
                             <Setter Property="Template">
@@ -1099,7 +1474,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Manual Tasks Header -->
+                        <!-- Offline Work Header -->
                         <Border Grid.Row="0" Background="White" CornerRadius="10" Padding="12" BorderBrush="#E5E7EB" BorderThickness="1" Margin="0,0,0,12">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
@@ -1112,7 +1487,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="Manual Tasks" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"
+                                    <TextBlock Grid.Column="0" Text="Offline Work" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center"
                                                FontWeight="SemiBold" FontSize="15" Margin="0,0,0,8"/>
                                     <DatePicker Grid.Column="1" SelectedDate="{Binding ManualTasksDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                 Width="140"/>
@@ -1213,7 +1588,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- Manual Tasks Content (Timeline or DataGrid) -->
+                        <!-- Offline Work Content (Timeline or DataGrid) -->
                         <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="12" BorderBrush="#E5E7EB" BorderThickness="1">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.12"/>
@@ -1506,6 +1881,147 @@
                     </Grid>
                 </TabItem>
 
+                <!-- Holidays Tab -->
+                <TabItem Header="Holidays" Style="{StaticResource UIATabItemStyle}">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Year selector + Add Holiday -->
+                        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Holidays" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <TextBlock Text="Year" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox ItemsSource="{Binding Holidays.AvailableYears}" SelectedItem="{Binding Holidays.SelectedYear, Mode=TwoWay}" Width="90"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="+ Add Holiday" Style="{StaticResource SecondaryButtonStyle}"
+                                        Command="{Binding Holidays.ShowAddFormCommand}"
+                                        Visibility="{Binding Holidays.IsFormVisible, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Add / Edit form -->
+                        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,10"
+                                Visibility="{Binding Holidays.IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Holidays.FormTitle}" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                        <TextBlock Text="Date" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
+                                        <DatePicker SelectedDate="{Binding Holidays.FormDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    DisplayDateStart="{Binding Holidays.YearRangeStart}" DisplayDateEnd="{Binding Holidays.YearRangeEnd}"
+                                                    Width="140"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                        <TextBlock Text="Holiday Name" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding Holidays.FormName, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,6,0">
+                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding Holidays.SaveHolidayCommand}"
+                                                ToolTip="{Binding Holidays.FormPrimaryTooltip}" Margin="0,0,6,0">
+                                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                        </Button>
+                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding Holidays.CancelHolidayEditCommand}" ToolTip="Cancel">
+                                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding Holidays.ValidationMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,8,0,0"
+                                           Visibility="{Binding Holidays.HasValidationMessage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Summary -->
+                        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Total:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding Holidays.TotalHolidays}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold" Margin="0,0,20,0"/>
+                                <TextBlock Text="Weekday:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding Holidays.WeekdayHolidayCount}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold" Margin="0,0,20,0"/>
+                                <TextBlock Text="Weekend:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                <TextBlock Text="{Binding Holidays.WeekendHolidayCount}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Holiday list -->
+                        <Border Grid.Row="3" Style="{StaticResource CardStyle}">
+                            <Grid>
+                                <DataGrid ItemsSource="{Binding Holidays.Holidays}"
+                                          Style="{StaticResource UIADataGridStyle}"
+                                          VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                          CanUserSortColumns="True" IsReadOnly="True"
+                                          Visibility="{Binding Holidays.HasHolidays, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <DataGrid.RowHeight>40</DataGrid.RowHeight>
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}"/>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.RowStyle>
+                                        <Style TargetType="DataGridRow" BasedOn="{StaticResource UIADataGridRowStyle}"/>
+                                    </DataGrid.RowStyle>
+                                    <DataGrid.CellStyle>
+                                        <Style TargetType="DataGridCell" BasedOn="{StaticResource UIADataGridCellStyle}"/>
+                                    </DataGrid.CellStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:dd-MMM-yyyy}}" Width="1*" SortMemberPath="Date"/>
+                                        <DataGridTextColumn Header="Day" Binding="{Binding DayName}" Width="1*" SortMemberPath="DayName"/>
+                                        <DataGridTextColumn Header="Holiday Name" Binding="{Binding HolidayName}" Width="2*" SortMemberPath="HolidayName">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTemplateColumn Width="72" MinWidth="72" CanUserSort="False">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource IconOnlyButtonStyle}" Margin="2,0" ToolTip="Edit" Focusable="False"
+                                                            Command="{Binding DataContext.Holidays.BeginEditHolidayCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Width="72" MinWidth="72" CanUserSort="False">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource IconOnlyButtonStyle}" Margin="2,0" ToolTip="Delete" Focusable="False"
+                                                            Command="{Binding DataContext.Holidays.DeleteHolidayCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Empty state -->
+                                <TextBlock Text="No holidays added for this year."
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="#9CA3AF" FontSize="14"
+                                           Visibility="{Binding Holidays.HasHolidays, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
                 <!-- Weekly Overview Tab -->
                 <TabItem Header="Weekly Overview" Style="{StaticResource UIATabItemStyle}">
                     <Grid Margin="0,10,0,0">
@@ -1567,7 +2083,7 @@
                                     <DataGridTextColumn Header="Date" Binding="{Binding Date, Mode=OneWay, StringFormat={}{0:dd-MMM-yyyy}}" Width="1*" SortMemberPath="Date"/>
                                     <DataGridTextColumn Header="Locked" Binding="{Binding LockedDurationText, Mode=OneWay}" Width="1*" SortMemberPath="LockedDuration"/>
                                     <DataGridTextColumn Header="Idle" Binding="{Binding IdleDurationText, Mode=OneWay}" Width="1*" SortMemberPath="IdleDuration"/>
-                                    <!-- Active, Manual, Total Active: grouped as sub-table with border and highlight -->
+                                    <!-- Active, Offline, Total Active: grouped as sub-table with border and highlight -->
                                     <DataGridTextColumn Header="Active" Binding="{Binding ActiveDurationText, Mode=OneWay}" Width="1*" SortMemberPath="ActiveDuration">
                                         <DataGridTextColumn.HeaderStyle>
                                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}">
@@ -1585,7 +2101,7 @@
                                             </Style>
                                         </DataGridTextColumn.CellStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Header="Manual" Binding="{Binding ManualTaskDurationText, Mode=OneWay}" Width="1*" SortMemberPath="ManualTaskDuration">
+                                    <DataGridTextColumn Header="Offline" Binding="{Binding ManualTaskDurationText, Mode=OneWay}" Width="1*" SortMemberPath="ManualTaskDuration">
                                         <DataGridTextColumn.HeaderStyle>
                                             <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource UIADataGridColumnHeaderStyle}">
                                                 <Setter Property="Background" Value="#E0F2E9"/>
@@ -1883,10 +2399,127 @@
                                                 Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Stretch" Margin="0,0,0,8"
                                                 Command="{Binding ClearCrashLogsCommand}"/>
                                         
-                                        <Button Grid.Row="11" Grid.ColumnSpan="2" Content="Save Settings" 
+                                        <Button Grid.Row="11" Grid.ColumnSpan="2" Content="Save Settings"
                                                 Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch"
                                                 Command="{Binding SaveSettingsCommand}"/>
                                     </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Application Categories Card -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0" DataContext="{Binding AppCategories}">
+                                <StackPanel>
+                                    <TextBlock Text="Application Categories" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,4"/>
+                                    <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" Margin="0,0,0,12"
+                                               Text="Group applications so Application Usage can break time down by category. Others catches anything not mapped and can't be deleted."/>
+
+                                    <!-- Add category -->
+                                    <TextBlock Text="Add a category" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Margin="0,0,8,0"
+                                                 Text="{Binding NewCategoryName, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <Button Grid.Column="1" Content="Add Category" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding AddCategoryCommand}"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding SaveStatusText}" Style="{StaticResource SecondaryTextStyle}" Foreground="#059669" Margin="0,0,0,10"/>
+
+                                    <!-- Category list -->
+                                    <ItemsControl ItemsSource="{Binding Categories}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:AppCategoryItem}">
+                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                                    <StackPanel>
+                                                        <Grid Margin="0,0,0,8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" FontWeight="SemiBold" Margin="0,0,8,0"
+                                                                     IsReadOnly="{Binding IsProtected}"
+                                                                     Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            <Button Grid.Column="1" Content="Delete" Style="{StaticResource SecondaryButtonStyle}"
+                                                                    Command="{Binding DataContext.DeleteCategoryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Visibility="{Binding IsProtected, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                                        </Grid>
+
+                                                        <ItemsControl ItemsSource="{Binding ProcessNames}" Margin="0,0,0,6">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,6,6">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <TextBlock Text="{Binding}" FontSize="12" VerticalAlignment="Center"/>
+                                                                            <Button Content="&#x2715;" Margin="6,0,0,0" Padding="2,0" Background="Transparent" BorderThickness="0"
+                                                                                    FontSize="9" Foreground="#9CA3AF" Cursor="Hand"
+                                                                                    Command="{Binding DataContext.RemoveProcessCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                                    CommandParameter="{Binding}"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" Margin="0,0,8,0"
+                                                                     Text="{Binding PendingProcessName, UpdateSourceTrigger=PropertyChanged}"/>
+                                                            <Button Grid.Column="1" Content="Add App" Style="{StaticResource SecondaryButtonStyle}"
+                                                                    Command="{Binding AddProcessCommand}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Unknown applications -->
+                                    <Grid Margin="0,8,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Detected unknown applications" Style="{StaticResource SectionHeaderTextStyle}" FontSize="15" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="Rescan" Style="{StaticResource SecondaryButtonStyle}"
+                                                Command="{Binding ScanForNewAppsCommand}"/>
+                                    </Grid>
+                                    <TextBlock Text="No new applications detected in the last 30 days." Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"
+                                               Visibility="{Binding HasUnknownApps, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                    <ItemsControl ItemsSource="{Binding UnknownApps}"
+                                                  Visibility="{Binding HasUnknownApps, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:UnknownAppItem}">
+                                                <Grid Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="160"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}"/>
+                                                    <ComboBox Grid.Column="1" Margin="8,0,8,0"
+                                                              ItemsSource="{Binding DataContext.Categories, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                              DisplayMemberPath="Name" SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
+                                                    <Button Grid.Column="2" Content="Assign" Style="{StaticResource SecondaryButtonStyle}"
+                                                            Command="{Binding DataContext.AssignUnknownAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Button Content="Save Categories" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch" Margin="0,10,0,0"
+                                            Command="{Binding SaveCommand}"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

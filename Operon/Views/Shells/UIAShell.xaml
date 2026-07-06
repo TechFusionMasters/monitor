@@ -328,7 +328,7 @@
                                             </Border>
                                         </Grid>
 
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding SelectedDayManualTasksText, StringFormat=Manual {0}}" FontSize="12" Margin="0,4,0,0"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding SelectedDayManualTasksText, StringFormat=Offline {0}}" FontSize="12" Margin="0,4,0,0"/>
                                         <Grid Grid.Row="1" Grid.Column="2" x:Name="SelectedDayChartAreaB" Height="10" VerticalAlignment="Center" Margin="0,4,0,0">
                                             <Border Background="#ECFDF5" Height="8" CornerRadius="4"/>
                                             <Border Background="#10B981" Style="{StaticResource SelectedDayBreakdownBarRowStyle}" HorizontalAlignment="Left">

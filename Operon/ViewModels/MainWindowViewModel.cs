@@ -36,6 +36,7 @@ namespace SystemActivityTracker.ViewModels
     {
         private int _weekNumber;
         private bool _hasManualTasks;
+        private bool _isHoliday;
 
         public override DateTime Date { get; set; }
         public TimeSpan TotalActive { get; set; }
@@ -73,6 +74,40 @@ namespace SystemActivityTracker.ViewModels
         public override bool HasMorningHalfLeave => LeaveDuration == Models.LeaveDuration.MorningHalf;
         public override bool HasAfternoonHalfLeave => LeaveDuration == Models.LeaveDuration.AfternoonHalf;
 
+        public bool IsHoliday
+        {
+            get => _isHoliday;
+            set
+            {
+                if (_isHoliday == value)
+                {
+                    return;
+                }
+
+                _isHoliday = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowActivityBar));
+            }
+        }
+
+        // Progress bar is hidden by default for non-current-month tiles and for
+        // weekends/leave/holidays — unless the day actually has recorded activity, in
+        // which case it shows regardless. Purely a display rule; none of the underlying
+        // hour calculations are affected.
+        public bool ShowActivityBar
+        {
+            get
+            {
+                if (!IsCurrentMonth || IsFuture || !HasChart)
+                {
+                    return false;
+                }
+
+                bool isSpecialDay = IsWeekend || HasLeave || IsHoliday;
+                return !isSpecialDay || HasData;
+            }
+        }
+
         // Leave credit derived from the already-applied LeaveDuration (Mon–Fri only).
         public TimeSpan LeaveCredit =>
             ExpectedHoursCalculator.GetDayLeaveCredit(Date, LeaveDuration);
@@ -93,7 +128,18 @@ namespace SystemActivityTracker.ViewModels
 
             ChartViewModel?.SetData(active, manual, idle, locked);
             HorizontalBarViewModel?.SetData(active, manual, idle, locked);
+
+            OnPropertyChanged(nameof(HasData));
+            OnPropertyChanged(nameof(ShowActivityBar));
         }
+
+        public string LeaveBadgeText => LeaveDuration switch
+        {
+            Models.LeaveDuration.FullDay => "Leave",
+            Models.LeaveDuration.MorningHalf => "½ AM",
+            Models.LeaveDuration.AfternoonHalf => "½ PM",
+            _ => string.Empty
+        };
 
         public void ApplyLeaveData(LeaveDuration? duration, LeaveType? type)
         {
@@ -103,6 +149,8 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(HasFullDayLeave));
             OnPropertyChanged(nameof(HasMorningHalfLeave));
             OnPropertyChanged(nameof(HasAfternoonHalfLeave));
+            OnPropertyChanged(nameof(LeaveBadgeText));
+            OnPropertyChanged(nameof(ShowActivityBar));
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -200,9 +248,10 @@ namespace SystemActivityTracker.ViewModels
         ApplicationUsage = 1,
         ManualTasks = 2,
         Leaves = 3,
-        WeeklyOverview = 4,
-        LastCrash = 5,
-        Settings = 6
+        Holidays = 4,
+        WeeklyOverview = 5,
+        LastCrash = 6,
+        Settings = 7
     }
 
     // Timeline Date Group Model
@@ -327,6 +376,10 @@ namespace SystemActivityTracker.ViewModels
         private AppSettings _settingsSnapshot = new AppSettings();
 
         public LastCrashViewModel LastCrash { get; }
+        public HolidaysViewModel Holidays { get; }
+        public WorkSummaryViewModel WorkSummary { get; }
+        public AppCategoriesViewModel AppCategories { get; }
+        public AppUsageBreakdownViewModel AppUsageBreakdown { get; }
 
         public MainWindowViewModel(
             TrackingService? trackingService,
@@ -334,7 +387,11 @@ namespace SystemActivityTracker.ViewModels
             IActivityLogReader? activityLogReader = null,
             ManualTaskService? manualTaskService = null,
             LeaveService? leaveService = null,
-            LastCrashViewModel? lastCrashViewModel = null)
+            LastCrashViewModel? lastCrashViewModel = null,
+            HolidaysViewModel? holidaysViewModel = null,
+            WorkSummaryViewModel? workSummaryViewModel = null,
+            AppCategoriesViewModel? appCategoriesViewModel = null,
+            AppUsageBreakdownViewModel? appUsageBreakdownViewModel = null)
         {
             _trackingService = trackingService;
             _settingsService = settingsService;
@@ -343,6 +400,11 @@ namespace SystemActivityTracker.ViewModels
             _leaveService = leaveService ?? new LeaveService();
 
             LastCrash = lastCrashViewModel ?? new LastCrashViewModel();
+            Holidays = holidaysViewModel ?? new HolidaysViewModel();
+            WorkSummary = workSummaryViewModel ?? new WorkSummaryViewModel(_activityLogReader, _manualTaskService, _leaveService);
+            AppCategories = appCategoriesViewModel ?? new AppCategoriesViewModel(activityLogReader: _activityLogReader);
+            AppUsageBreakdown = appUsageBreakdownViewModel ?? new AppUsageBreakdownViewModel(_activityLogReader);
+            AppCategories.CategoriesSaved += (_, _) => AppUsageBreakdown.Refresh();
             TodayText = DateTime.Now.ToString("dddd, dd MMMM yyyy");
             _weekStartDate = WorkWeekHelper.GetWeekStartMonday(DateTime.Today);
             _weekPickerDate = DateTime.Today;

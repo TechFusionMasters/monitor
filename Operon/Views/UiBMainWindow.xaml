@@ -138,7 +138,7 @@
                                             <TextBlock Grid.Row="3" Text="Active:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
                                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedDayActiveTrackedText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,2"/>
 
-                                            <TextBlock Grid.Row="4" Text="Manual:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
+                                            <TextBlock Grid.Row="4" Text="Offline:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
                                             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedDayManualTasksText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,2"/>
 
                                             <TextBlock Grid.Row="5" Text="Total Active:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
@@ -212,7 +212,7 @@
                                                         </Border>
                                                     </Grid>
 
-                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding SelectedDayManualTasksText, StringFormat=Manual {0}}" FontSize="12" Margin="0,4,0,0"/>
+                                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding SelectedDayManualTasksText, StringFormat=Offline {0}}" FontSize="12" Margin="0,4,0,0"/>
                                                     <Grid Grid.Row="1" Grid.Column="2" x:Name="SelectedDayChartAreaB" Height="10" VerticalAlignment="Center" Margin="0,4,0,0">
                                                         <Border Background="#ECFDF5" Height="8" CornerRadius="4"/>
                                                         <Border Background="#10B981" Style="{StaticResource SelectedDayBreakdownBarRowStyle}" HorizontalAlignment="Left">
@@ -358,7 +358,7 @@
 
                                 <Border Grid.Column="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="10" Background="White">
                                     <StackPanel>
-                                        <TextBlock Text="Manual Tasks" Style="{StaticResource SectionHeaderTextStyle}"/>
+                                        <TextBlock Text="Offline Work" Style="{StaticResource SectionHeaderTextStyle}"/>
                                         <TextBox Margin="0,2,0,6" Text="{Binding ManualTaskName, UpdateSourceTrigger=PropertyChanged}"/>
 
                                         <Grid Margin="0,0,0,6">
@@ -421,7 +421,7 @@
                                         </DataGrid>
 
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-                                            <TextBlock Text="Manual:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Offline:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
                                             <TextBlock Text="{Binding ManualTotalText}" Style="{StaticResource SecondaryTextStyle}"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -457,7 +457,7 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Date" Binding="{Binding Date, Mode=OneWay, StringFormat={}{0:dd-MMM-yyyy}}" Width="*"/>
                                     <DataGridTextColumn Header="Active" Binding="{Binding ActiveDurationText, Mode=OneWay}" Width="*"/>
-                                    <DataGridTextColumn Header="Manual" Binding="{Binding ManualTaskDurationText, Mode=OneWay}" Width="*"/>
+                                    <DataGridTextColumn Header="Offline" Binding="{Binding ManualTaskDurationText, Mode=OneWay}" Width="*"/>
                                     <DataGridTextColumn Header="Total Active" Binding="{Binding TotalActiveDurationText, Mode=OneWay}" Width="*"/>
                                     <DataGridTextColumn Header="Idle" Binding="{Binding IdleDurationText, Mode=OneWay}" Width="*"/>
                                     <DataGridTextColumn Header="Locked" Binding="{Binding LockedDurationText, Mode=OneWay}" Width="*"/>
@@ -483,7 +483,7 @@
                                         <TextBlock Grid.Row="0" Text="Active:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeeklyTrackedActiveText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,2"/>
 
-                                        <TextBlock Grid.Row="1" Text="Manual:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
+                                        <TextBlock Grid.Row="1" Text="Offline:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
                                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WeeklyManualText}" Style="{StaticResource BodyTextStyle}" Margin="0,2,0,2"/>
 
                                         <TextBlock Grid.Row="2" Text="Total Active:" Style="{StaticResource BodyTextStyle}" Margin="0,2,12,2"/>
@@ -557,7 +557,7 @@
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                         <TextBlock Text="Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
                                         <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Manual:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
+                                        <TextBlock Text="Offline:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
                                         <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
                                         <TextBlock Text="Total Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
                                         <TextBlock Text="{Binding MonthlyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}"/>
