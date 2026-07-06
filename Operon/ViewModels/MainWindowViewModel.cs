@@ -108,6 +108,29 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
+        // GIF badge key for the day's Total Active hours (tracked + manual — the same
+        // total already shown as "Total Active" in this tile). Outside these ranges, no
+        // GIF is shown. Purely a display rule; does not affect any hour calculation.
+        //   [6h, 8h)  -> TowardsTarget
+        //   [8h, 10h) -> ReachedTarget
+        //   [10h,12h] -> OverBurned
+        public string? ActiveHoursGifKey
+        {
+            get
+            {
+                if (!IsCurrentMonth || IsFuture)
+                {
+                    return null;
+                }
+
+                var hours = (TotalActive + ManualTime).TotalHours;
+                if (hours >= 6 && hours < 8) return "TowardsTarget";
+                if (hours >= 8 && hours < 10) return "ReachedTarget";
+                if (hours >= 10 && hours <= 12) return "OverBurned";
+                return null;
+            }
+        }
+
         // Leave credit derived from the already-applied LeaveDuration (Mon–Fri only).
         public TimeSpan LeaveCredit =>
             ExpectedHoursCalculator.GetDayLeaveCredit(Date, LeaveDuration);
@@ -131,6 +154,7 @@ namespace SystemActivityTracker.ViewModels
 
             OnPropertyChanged(nameof(HasData));
             OnPropertyChanged(nameof(ShowActivityBar));
+            OnPropertyChanged(nameof(ActiveHoursGifKey));
         }
 
         public string LeaveBadgeText => LeaveDuration switch
@@ -1371,6 +1395,8 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyActiveText));
             OnPropertyChanged(nameof(MonthlyTotalActiveText));
             OnPropertyChanged(nameof(MonthlyStatusText));
+            OnPropertyChanged(nameof(MonthlyStatusKind));
+            OnPropertyChanged(nameof(MonthlyStatusLabel));
         }
 
         private void NotifyMonthHeaderTotalsChanged()
@@ -1382,6 +1408,8 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyActiveText));
             OnPropertyChanged(nameof(MonthlyLeaveText));
             OnPropertyChanged(nameof(MonthlyStatusText));
+            OnPropertyChanged(nameof(MonthlyStatusKind));
+            OnPropertyChanged(nameof(MonthlyStatusLabel));
         }
 
         /// <summary>
@@ -1948,6 +1976,31 @@ namespace SystemActivityTracker.ViewModels
                 return summary.StatusText;
             }
         }
+
+        // Same Expected/Active(tracked+manual)/Leave comparison as MonthlyStatusText above —
+        // just surfaced as a key (for visual styling) and a label matching the Work Summary
+        // vocabulary, for the redesigned Monthly Usage summary card.
+        public string MonthlyStatusKind
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today);
+                var progress = tracked + manual + _monthLeaveCredit;
+
+                if (progress < expected) return "RemainingWork";
+                if (progress > expected) return "ExtraWorked";
+                return "TargetAchieved";
+            }
+        }
+
+        public string MonthlyStatusLabel => MonthlyStatusKind switch
+        {
+            "RemainingWork" => "Remaining Work",
+            "ExtraWorked" => "Extra Worked",
+            _ => "Target Achieved"
+        };
 
         private int GetManualSecondsForMonth(DateTime month) =>
             HoursCalculationHelper.SumManualSecondsForMonth(

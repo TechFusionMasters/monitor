@@ -16,4 +16,14 @@
     <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
   </ItemGroup>
 
+  <!-- Month view day-tile GIF indicators. Source files live in the repo-root Assets
+       folder (shared, outside this project); copied next to the exe so both build and
+       publish output include them under an Assets subfolder. -->
+  <ItemGroup>
+    <Content Include="..\Assets\*.gif">
+      <Link>Assets\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

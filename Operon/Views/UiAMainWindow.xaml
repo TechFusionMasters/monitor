@@ -572,6 +572,17 @@
                                 </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
+
+                        <!-- Compact KPI chip for the Monthly Usage summary row -->
+                        <Style x:Key="MonthlyStatChipStyle" TargetType="Border">
+                            <Setter Property="Background" Value="#F9FAFB"/>
+                            <Setter Property="BorderBrush" Value="#E5E7EB"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                            <Setter Property="Padding" Value="12,6"/>
+                            <Setter Property="Margin" Value="0,4,8,4"/>
+                            <Setter Property="MinWidth" Value="84"/>
+                        </Style>
                     </TabItem.Resources>
                     <Grid Margin="0,10,0,0">
                         <Grid.RowDefinitions>
@@ -589,18 +600,60 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                    <TextBlock Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                        <TextBlock Text="Expected:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding MonthlyExpectedText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0" FontWeight="SemiBold"/>
-                                        <TextBlock Text="Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding MonthlyActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Leave:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0"/>
-                                        <TextBlock Text="Total Active:" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,6,0" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding MonthlyTotalActiveText}" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,14,0" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding MonthlyStatusText}" Style="{StaticResource SecondaryTextStyle}" Foreground="#059669"/>
-                                    </StackPanel>
+                                    <TextBlock Text="Monthly Usage" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,8"/>
+
+                                    <WrapPanel Orientation="Horizontal">
+                                        <!-- Expected Hours -->
+                                        <Border Style="{StaticResource MonthlyStatChipStyle}">
+                                            <StackPanel>
+                                                <TextBlock Text="EXPECTED" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding MonthlyExpectedText}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Total Active Hours (headline figure) + Active/Offline breakdown -->
+                                        <Border Style="{StaticResource MonthlyStatChipStyle}" Background="#EFF6FF" BorderBrush="#BFDBFE">
+                                            <StackPanel>
+                                                <TextBlock Text="TOTAL ACTIVE HOURS" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding MonthlyActiveText}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AccentBrush}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                    <TextBlock Text="Active " Style="{StaticResource SecondaryTextStyle}" FontSize="10"/>
+                                                    <TextBlock Text="{Binding MonthlyActiveTrackedText}" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="Offline " Style="{StaticResource SecondaryTextStyle}" FontSize="10"/>
+                                                    <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Leave Hours -->
+                                        <Border Style="{StaticResource MonthlyStatChipStyle}">
+                                            <StackPanel>
+                                                <TextBlock Text="LEAVE" Style="{StaticResource SecondaryTextStyle}" FontSize="10" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding MonthlyLeaveText}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Status: Remaining Work / Extra Worked / Target Achieved — distinct color per state -->
+                                        <Border CornerRadius="14" Padding="14,0" Margin="0,4,0,4" MinHeight="52" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#F59E0B"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="TargetAchieved">
+                                                            <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding MonthlyStatusKind}" Value="ExtraWorked">
+                                                            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="STATUS" FontSize="9" FontWeight="SemiBold" Foreground="White" Opacity="0.75"/>
+                                                <TextBlock Text="{Binding MonthlyStatusLabel}" Foreground="White" FontSize="14" FontWeight="Bold"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </WrapPanel>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -660,6 +713,14 @@
                                                         </Border.Effect>
                                                         <TextBlock Text="{Binding LeaveBadgeText}" Foreground="White" FontSize="9" FontWeight="Bold"/>
                                                     </Border>
+
+                                                    <!-- Total-active-hours GIF badge (bottom-right). Stretch=Uniform on the
+                                                         control keeps it inside its box with no distortion/overflow; hidden
+                                                         entirely (GifKey=null) outside the 6-12h ranges. -->
+                                                    <controls:AnimatedGifImage Grid.RowSpan="2" GifKey="{Binding ActiveHoursGifKey}"
+                                                                               Width="26" Height="26" Margin="0,0,3,3"
+                                                                               HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                                               IsHitTestVisible="False"/>
 
                                                     <!-- Date Number (only for regular days) — filled accent circle marks today -->
                                                     <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0"
@@ -1051,7 +1112,7 @@
                                 <!-- Period navigation -->
                                 <Grid Grid.Row="1" Margin="0,10,0,0">
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsTodayView, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay}" DisplayDateEnd="{Binding MaxSelectableDate}" Width="140"/>
+                                        <DatePicker SelectedDate="{Binding SelectedDate, Mode=TwoWay}" DisplayDateEnd="{Binding MaxSelectableDate, Mode=OneWay}" Width="140"/>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsWeekView, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -1077,10 +1138,10 @@
 
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding IsCustomView, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <DatePicker SelectedDate="{Binding CustomStartDate, Mode=TwoWay}"
-                                                    DisplayDateEnd="{Binding MaxSelectableDate}" Width="115" Margin="0,0,6,0"/>
+                                                    DisplayDateEnd="{Binding MaxSelectableDate, Mode=OneWay}" Width="115" Margin="0,0,6,0"/>
                                         <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,6,0" Style="{StaticResource SecondaryTextStyle}"/>
                                         <DatePicker SelectedDate="{Binding CustomEndDate, Mode=TwoWay}"
-                                                    DisplayDateEnd="{Binding MaxSelectableDate}" Width="115"/>
+                                                    DisplayDateEnd="{Binding MaxSelectableDate, Mode=OneWay}" Width="115"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -1208,10 +1269,10 @@
 
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding WorkSummary.IsCustomView, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <DatePicker SelectedDate="{Binding WorkSummary.CustomStartDate, Mode=TwoWay}"
-                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate}" Width="115" Margin="0,0,6,0"/>
+                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate, Mode=OneWay}" Width="115" Margin="0,0,6,0"/>
                                         <TextBlock Text="to" VerticalAlignment="Center" Margin="0,0,6,0" Style="{StaticResource SecondaryTextStyle}"/>
                                         <DatePicker SelectedDate="{Binding WorkSummary.CustomEndDate, Mode=TwoWay}"
-                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate}" Width="115"/>
+                                                    DisplayDateEnd="{Binding WorkSummary.MaxSelectableDate, Mode=OneWay}" Width="115"/>
                                     </StackPanel>
                                 </Grid>
 
