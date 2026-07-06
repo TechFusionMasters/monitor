@@ -383,6 +383,7 @@ namespace SystemActivityTracker.ViewModels
         private bool _hasWeekLeave;
         private TimeSpan _weeklyLeaveDuration;
         private TimeSpan _monthLeaveCredit = TimeSpan.Zero;
+        private TimeSpan _monthHolidayCredit = TimeSpan.Zero;
         private DateTime? _runStartUtc;
         private TimeSpan _accumulatedRunTime = TimeSpan.Zero;
         private readonly DispatcherTimer _runningTimer = new DispatcherTimer();
@@ -1397,6 +1398,14 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyStatusText));
             OnPropertyChanged(nameof(MonthlyStatusKind));
             OnPropertyChanged(nameof(MonthlyStatusLabel));
+            OnPropertyChanged(nameof(MonthlyStatusIcon));
+            OnPropertyChanged(nameof(MonthlyProgressPercent));
+            OnPropertyChanged(nameof(MonthlyProgressPercentText));
+            OnPropertyChanged(nameof(MonthlyProgressFractionText));
+            OnPropertyChanged(nameof(MonthlyStatusDetailText));
+            OnPropertyChanged(nameof(MonthlyActiveHoursValue));
+            OnPropertyChanged(nameof(MonthlyOfflineHoursValue));
+            OnPropertyChanged(nameof(MonthlyLeaveHoursValue));
         }
 
         private void NotifyMonthHeaderTotalsChanged()
@@ -1410,6 +1419,14 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyStatusText));
             OnPropertyChanged(nameof(MonthlyStatusKind));
             OnPropertyChanged(nameof(MonthlyStatusLabel));
+            OnPropertyChanged(nameof(MonthlyStatusIcon));
+            OnPropertyChanged(nameof(MonthlyProgressPercent));
+            OnPropertyChanged(nameof(MonthlyProgressPercentText));
+            OnPropertyChanged(nameof(MonthlyProgressFractionText));
+            OnPropertyChanged(nameof(MonthlyStatusDetailText));
+            OnPropertyChanged(nameof(MonthlyActiveHoursValue));
+            OnPropertyChanged(nameof(MonthlyOfflineHoursValue));
+            OnPropertyChanged(nameof(MonthlyLeaveHoursValue));
         }
 
         /// <summary>
@@ -1916,6 +1933,17 @@ namespace SystemActivityTracker.ViewModels
                 _selectedYear, _selectedMonth,
                 date => monthLeaveLookup.TryGetValue(date, out var e) ? e?.Duration : null);
 
+            // Monthly Usage summary's Expected Hours excludes public holidays — reuses the
+            // same additive, month-to-date-aware day enumeration and holiday-credit helper
+            // already used by the Work Summary panel, so this doesn't touch
+            // ExpectedHoursCalculator.GetMonthExpectedHours itself (still used unadjusted
+            // elsewhere) or any other view's calculations.
+            _monthHolidayCredit = TimeSpan.Zero;
+            foreach (var holidayDate in WorkSummaryCalculator.EnumerateMonthView(_selectedYear, _selectedMonth, DateTime.Today))
+            {
+                _monthHolidayCredit += WorkSummaryCalculator.GetDayHolidayCredit(holidayDate, holidayDates.Contains(holidayDate.Date));
+            }
+
             IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
 
             NotifyMonthHeaderTotalsChanged();
@@ -1934,8 +1962,18 @@ namespace SystemActivityTracker.ViewModels
 
         // ── New unified monthly properties ────────────────────────────────────────
 
-        public string MonthlyExpectedText =>
-            FormatTimeSpan(ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today));
+        // Month-to-date Expected Hours minus public-holiday hours (weekday holidays
+        // only — weekends already contribute 0). Reuses the same additive
+        // WorkSummaryCalculator helpers as the Work Summary panel; does not alter
+        // ExpectedHoursCalculator.GetMonthExpectedHours itself, so nothing else that
+        // calls it (e.g. HoursCalculationHelper.CalculateMonthSummary, tests) is affected.
+        private TimeSpan GetMonthlyExpectedHoursAdjusted()
+        {
+            var expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today) - _monthHolidayCredit;
+            return expected < TimeSpan.Zero ? TimeSpan.Zero : expected;
+        }
+
+        public string MonthlyExpectedText => FormatTimeSpan(GetMonthlyExpectedHoursAdjusted());
 
         // Active = tracked + manual.
         public string MonthlyActiveText
@@ -1986,7 +2024,7 @@ namespace SystemActivityTracker.ViewModels
             {
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
-                var expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today);
+                var expected = GetMonthlyExpectedHoursAdjusted();
                 var progress = tracked + manual + _monthLeaveCredit;
 
                 if (progress < expected) return "RemainingWork";
@@ -1997,10 +2035,105 @@ namespace SystemActivityTracker.ViewModels
 
         public string MonthlyStatusLabel => MonthlyStatusKind switch
         {
-            "RemainingWork" => "Remaining Work",
-            "ExtraWorked" => "Extra Worked",
+            "RemainingWork" => "Remaining",
+            "ExtraWorked" => "Worked More",
             _ => "Target Achieved"
         };
+
+        // Simple glyph paired with the status banner's color — plain Unicode (not an
+        // icon-font codepoint) so it renders correctly without depending on Segoe MDL2
+        // Assets glyph availability.
+        public string MonthlyStatusIcon => MonthlyStatusKind switch
+        {
+            "RemainingWork" => "⌛", // hourglass
+            "ExtraWorked" => "▲", // up triangle
+            _ => "✓" // checkmark
+        };
+
+        // 0-100, clamped — drives the donut ring's fill and the big percentage readout.
+        // Progress = Total Active Hours (tracked + manual) + Leave, same as MonthlyStatusKind.
+        public double MonthlyProgressPercent
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var expected = GetMonthlyExpectedHoursAdjusted();
+                var progress = tracked + manual + _monthLeaveCredit;
+
+                if (expected <= TimeSpan.Zero)
+                {
+                    return progress > TimeSpan.Zero ? 100.0 : 0.0;
+                }
+
+                return Math.Clamp(progress.TotalSeconds / expected.TotalSeconds * 100.0, 0.0, 100.0);
+            }
+        }
+
+        public string MonthlyProgressPercentText => $"{MonthlyProgressPercent:0}%";
+
+        // Donut 1's center label — always "completed / expected" (e.g. "72h / 96h"),
+        // regardless of which state is active. Same Progress/Expected values as
+        // MonthlyStatusKind.
+        public string MonthlyProgressFractionText
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var expected = GetMonthlyExpectedHoursAdjusted();
+                var progress = tracked + manual + _monthLeaveCredit;
+                return $"{FormatHoursShort(progress)} / {FormatHoursShort(expected)}";
+            }
+        }
+
+        // The single indicator shown below Donut 1 — same Expected/Progress comparison
+        // as MonthlyStatusKind, phrased so the user never has to do the subtraction
+        // themselves. Exactly one of these three is ever shown:
+        //   Remaining        -> "Remaining: Xh Ym"
+        //   Target Achieved  -> "Target Achieved" (the 72h/96h fraction is already
+        //                        equal, so no extra hours are repeated here)
+        //   Worked More      -> "Worked More: +Xh Ym"
+        public string MonthlyStatusDetailText
+        {
+            get
+            {
+                var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
+                var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
+                var expected = GetMonthlyExpectedHoursAdjusted();
+                var progress = tracked + manual + _monthLeaveCredit;
+                var diff = progress - expected;
+
+                return MonthlyStatusKind switch
+                {
+                    "RemainingWork" => $"Remaining: {FormatHoursShort(-diff)}",
+                    "ExtraWorked" => $"Worked More: +{FormatHoursShort(diff)}",
+                    _ => "Target Achieved"
+                };
+            }
+        }
+
+        // "Xh Ym" — omits minutes when they're zero (e.g. "96h" rather than "96h 0m").
+        // Used only by the Monthly Usage donuts; other figures on that card keep
+        // FormatTimeSpan's existing HH:MM style unchanged.
+        private static string FormatHoursShort(TimeSpan span)
+        {
+            int h = (int)span.TotalHours;
+            int m = span.Minutes;
+            return m == 0 ? $"{h}h" : $"{h}h {m}m";
+        }
+
+        // ── Donut 2 segment values (Active / Offline / Leave), in hours — raw doubles
+        // purely for chart-arc proportions. Each reuses the exact same underlying sum
+        // already shown as text elsewhere on this card (MonthlyActiveTrackedText,
+        // MonthlyManualTasksText, MonthlyLeaveText) — no new calculation.
+        public double MonthlyActiveHoursValue =>
+            TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds))).TotalHours;
+
+        public double MonthlyOfflineHoursValue =>
+            TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime)).TotalHours;
+
+        public double MonthlyLeaveHoursValue => _monthLeaveCredit.TotalHours;
 
         private int GetManualSecondsForMonth(DateTime month) =>
             HoursCalculationHelper.SumManualSecondsForMonth(
