@@ -1496,29 +1496,38 @@
                                         <TextBlock Grid.Column="1" Text="{Binding PeriodLabel}" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
                                     </Grid>
 
+                                    <!-- Name gets its own trimmable column; hours sits in a fixed,
+                                         never-trimmed column so a long process/category name can
+                                         never clip the "(Xh Ym)" text off the end. -->
                                     <Grid Margin="0,0,0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Most Used Application" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedApplicationText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedApplicationNameText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding MostUsedApplicationHoursText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Grid Margin="0,0,0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Most Used Category" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedCategoryText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MostUsedCategoryNameText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding MostUsedCategoryHoursText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Grid Margin="0,0,0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Longest Session" Style="{StaticResource SecondaryTextStyle}" Width="150"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding LongestSessionText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding LongestSessionNameText}" Style="{StaticResource BodyTextStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding LongestSessionHoursText}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Grid Margin="0,0,0,4">
                                         <Grid.ColumnDefinitions>
@@ -1587,13 +1596,13 @@
                                                 </MultiTrigger.Conditions>
                                                 <Setter TargetName="watermark" Property="Visibility" Value="Visible"/>
                                             </MultiTrigger>
+                                            <!-- No separate "Text==''" -> Collapsed triggers here: those would always
+                                                 win over the MultiTriggers above (last-declared trigger wins when
+                                                 several match), permanently hiding the watermark even when empty
+                                                 and unfocused. The TextBlock's own default Visibility="Collapsed"
+                                                 already covers every other case (non-empty text), so only
+                                                 IsFocused=True needs its own override here. -->
                                             <Trigger Property="IsFocused" Value="True">
-                                                <Setter TargetName="watermark" Property="Visibility" Value="Collapsed"/>
-                                            </Trigger>
-                                            <Trigger Property="Text" Value="">
-                                                <Setter TargetName="watermark" Property="Visibility" Value="Collapsed"/>
-                                            </Trigger>
-                                            <Trigger Property="Text" Value="{x:Null}">
                                                 <Setter TargetName="watermark" Property="Visibility" Value="Collapsed"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
@@ -1601,7 +1610,7 @@
                                 </Setter.Value>
                             </Setter>
                         </Style>
-                        
+
                         <Style x:Key="IconOnlyButtonStyle" TargetType="Button">
                             <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="BorderThickness" Value="0"/>
@@ -1966,43 +1975,50 @@
                             </Grid>
                         </Border>
 
-                        <!-- Leave entry form -->
+                        <!-- Leave entry form — Date/Duration/Type/buttons share the same label-row
+                             height (a matching blank spacer above the buttons) and the same 36px
+                             control height (DatePicker's implicit style height, applied explicitly
+                             to the ComboBoxes and buttons here too, since ComboBox has no shared
+                             app-wide style to inherit it from), so the row lines up instead of each
+                             control rendering at its own native size. -->
                         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                     <TextBlock Text="Date" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
                                     <DatePicker SelectedDate="{Binding LeaveFormDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0">
                                     <TextBlock Text="Duration" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
-                                    <ComboBox ItemsSource="{Binding LeaveDurationChoices}" DisplayMemberPath="Label"
+                                    <ComboBox Height="36" VerticalContentAlignment="Center"
+                                              ItemsSource="{Binding LeaveDurationChoices}" DisplayMemberPath="Label"
                                               SelectedValuePath="Value" SelectedValue="{Binding LeaveFormDuration, Mode=TwoWay}"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Margin="0,0,12,0">
+                                <StackPanel Grid.Column="2" Margin="0,0,10,0">
                                     <TextBlock Text="Type" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
-                                    <ComboBox ItemsSource="{Binding LeaveTypeChoices}" DisplayMemberPath="Label"
+                                    <ComboBox Height="36" VerticalContentAlignment="Center"
+                                              ItemsSource="{Binding LeaveTypeChoices}" DisplayMemberPath="Label"
                                               SelectedValuePath="Value" SelectedValue="{Binding LeaveFormType, Mode=TwoWay}"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
-                                    <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding SaveLeaveCommand}" ToolTip="{Binding LeaveFormPrimaryTooltip}" Margin="0,0,6,0">
-                                        <TextBlock Text="{Binding LeaveFormPrimaryGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
-                                    </Button>
-                                    <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding DeleteLeaveCommand}" ToolTip="Delete" Margin="0,0,6,0">
-                                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
-                                    </Button>
-                                    <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding CancelLeaveEditCommand}" ToolTip="Cancel"
-                                            Visibility="{Binding IsLeaveEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
-                                    </Button>
+                                <StackPanel Grid.Column="3">
+                                    <TextBlock Text=" " Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Width="36" Height="36" Command="{Binding SaveLeaveCommand}" ToolTip="{Binding LeaveFormPrimaryTooltip}" Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding LeaveFormPrimaryGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                        </Button>
+                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Width="36" Height="36" Command="{Binding DeleteLeaveCommand}" ToolTip="Delete" Margin="0,0,6,0">
+                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                        </Button>
+                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Width="36" Height="36" Command="{Binding CancelLeaveEditCommand}" ToolTip="Cancel"
+                                                Visibility="{Binding IsLeaveEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                        </Button>
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -2083,31 +2099,39 @@
                                 Visibility="{Binding Holidays.IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
                             <StackPanel>
                                 <TextBlock Text="{Binding Holidays.FormTitle}" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,10"/>
+                                <!-- All three columns share the same label-row height (a matching blank
+                                     spacer above the buttons) and the same 36px control height (DatePicker's
+                                     implicit UIADatePickerStyle height, applied explicitly to the TextBox and
+                                     buttons here too), so the whole row lines up instead of DatePicker/TextBox/
+                                     buttons each rendering at a different native size. -->
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                         <TextBlock Text="Date" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
                                         <DatePicker SelectedDate="{Binding Holidays.FormDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     DisplayDateStart="{Binding Holidays.YearRangeStart, Mode=OneWay}" DisplayDateEnd="{Binding Holidays.YearRangeEnd, Mode=OneWay}"
                                                     Width="140"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                    <StackPanel Grid.Column="1" Margin="0,0,10,0">
                                         <TextBlock Text="Holiday Name" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
-                                        <TextBox Text="{Binding Holidays.FormName, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Height="36" VerticalContentAlignment="Center"
+                                                 Text="{Binding Holidays.FormName, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,6,0">
-                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding Holidays.SaveHolidayCommand}"
-                                                ToolTip="{Binding Holidays.FormPrimaryTooltip}" Margin="0,0,6,0">
-                                            <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
-                                        </Button>
-                                        <Button Style="{StaticResource IconOnlyButtonStyle}" Command="{Binding Holidays.CancelHolidayEditCommand}" ToolTip="Cancel">
-                                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
-                                        </Button>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text=" " Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource IconOnlyButtonStyle}" Width="36" Height="36" Command="{Binding Holidays.SaveHolidayCommand}"
+                                                    ToolTip="{Binding Holidays.FormPrimaryTooltip}" Margin="0,0,6,0">
+                                                <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                            </Button>
+                                            <Button Style="{StaticResource IconOnlyButtonStyle}" Width="36" Height="36" Command="{Binding Holidays.CancelHolidayEditCommand}" ToolTip="Cancel">
+                                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="18"/>
+                                            </Button>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="{Binding Holidays.ValidationMessage}" Foreground="{StaticResource ErrorBrush}" Margin="0,8,0,0"
@@ -2671,20 +2695,39 @@
                                                   Visibility="{Binding HasUnknownApps, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:UnknownAppItem}">
-                                                <Grid Margin="0,0,0,4">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="140"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}" FontSize="12"/>
-                                                    <ComboBox Grid.Column="1" Padding="4,2" Margin="6,0,6,0"
-                                                              ItemsSource="{Binding DataContext.Categories, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                              DisplayMemberPath="Name" SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
-                                                    <Button Grid.Column="2" Content="Assign" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
-                                                            Command="{Binding DataContext.AssignUnknownAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                            CommandParameter="{Binding}"/>
-                                                </Grid>
+                                                <!-- Bordered row + hover highlight so it's clear which row the mouse
+                                                     is over when several unknown apps are listed close together;
+                                                     ToolTip shows the full process name in case it's ever wider
+                                                     than the trimmed column. -->
+                                                <Border x:Name="UnknownAppRowBorder" Background="Transparent" BorderBrush="#E5E7EB" BorderThickness="1"
+                                                        CornerRadius="6" Padding="6,4" Margin="0,0,0,4">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Style.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#F3F4F6"/>
+                                                                    <Setter Property="BorderBrush" Value="#D1D5DB"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="140"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding ProcessName}" ToolTip="{Binding ProcessName}"
+                                                                   VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}" FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                                        <ComboBox Grid.Column="1" Padding="4,2" Margin="0,0,6,0"
+                                                                  ItemsSource="{Binding DataContext.Categories, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                  DisplayMemberPath="Name" SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
+                                                        <Button Grid.Column="2" Content="Assign" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
+                                                                Command="{Binding DataContext.AssignUnknownAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}"/>
+                                                    </Grid>
+                                                </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
