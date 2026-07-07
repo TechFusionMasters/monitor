@@ -572,6 +572,20 @@
                                     </MultiDataTrigger.Conditions>
                                     <Setter Property="Background" Value="#FFF1F2"/>
                                 </MultiDataTrigger>
+                                <!-- Holiday tint takes precedence over the weekend tint above (declared
+                                     after it) since a public holiday is the more specific, more relevant
+                                     fact to surface — e.g. a holiday that happens to fall on a weekend
+                                     still reads as "holiday" rather than plain weekend. IsHoliday doesn't
+                                     exist on WeeklySummaryDayItem (the Summary-column cells), so the
+                                     binding simply never matches True there — no separate guard needed. -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsHoliday}" Value="True"/>
+                                        <Condition Binding="{Binding HasManualTasks}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Background" Value="#E0F2FE"/>
+                                    <Setter Property="BorderBrush" Value="#7DD3FC"/>
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
 
@@ -667,10 +681,15 @@
                                                 <TextBlock Text="Offline" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
                                                 <TextBlock Text="{Binding MonthlyManualTasksText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
                                             </StackPanel>
-                                            <StackPanel Orientation="Horizontal">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                                                 <Border Width="7" Height="7" CornerRadius="2" Background="#F59E0B" Margin="0,0,4,0"/>
                                                 <TextBlock Text="Leave" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
                                                 <TextBlock Text="{Binding MonthlyLeaveText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="7" Height="7" CornerRadius="2" Background="#0EA5E9" Margin="0,0,4,0"/>
+                                                <TextBlock Text="Holiday" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
+                                                <TextBlock Text="{Binding MonthlyHolidayCountText}" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </StackPanel>
 
@@ -2118,7 +2137,13 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="0,0,10,0">
                                         <TextBlock Text="Holiday Name" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
-                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Height="36" VerticalContentAlignment="Center"
+                                        <!-- Height="36" matches the DatePicker/buttons in this row. UIATextBoxStyle's
+                                             ControlTemplate uses Padding as the ScrollViewer's Margin (not internal
+                                             padding around a flexible box), so the default Padding="8" (uniform)
+                                             would squeeze the usable text area down to Height minus 2x8 = 20px and
+                                             clip the typed text — overridden here to a slim "2" (32px usable) so
+                                             the text renders fully while the box still matches the row's height. -->
+                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Height="36" Padding="4"
                                                  Text="{Binding Holidays.FormName, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
