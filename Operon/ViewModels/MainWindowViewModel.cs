@@ -433,6 +433,12 @@ namespace SystemActivityTracker.ViewModels
             AppCategories = appCategoriesViewModel ?? new AppCategoriesViewModel(activityLogReader: _activityLogReader);
             AppUsageBreakdown = appUsageBreakdownViewModel ?? new AppUsageBreakdownViewModel(_activityLogReader);
             AppCategories.CategoriesSaved += (_, _) => AppUsageBreakdown.Refresh();
+            // Without this, adding/editing/deleting a holiday on the Holidays tab left the
+            // Month View calendar (each day's IsHoliday flag) and Monthly Usage summary
+            // (Expected Hours' holiday deduction, via _monthHolidayCredit) showing stale
+            // data until some unrelated action (switching months, app restart) happened
+            // to call LoadMonthlyUsage() again.
+            Holidays.HolidaysChanged += (_, _) => LoadMonthlyUsage();
             TodayText = DateTime.Now.ToString("dddd, dd MMMM yyyy");
             _weekStartDate = WorkWeekHelper.GetWeekStartMonday(DateTime.Today);
             _weekPickerDate = DateTime.Today;
