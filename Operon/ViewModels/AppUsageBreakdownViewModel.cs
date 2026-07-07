@@ -44,9 +44,12 @@ namespace SystemActivityTracker.ViewModels
         private DateTime _customEndDate = DateTime.Today;
         private TimeSpan _totalActive;
 
-        private string _mostUsedApplicationText = NoDataText;
-        private string _mostUsedCategoryText = NoDataText;
-        private string _longestSessionText = NoDataText;
+        private string _mostUsedApplicationName = NoDataText;
+        private string _mostUsedApplicationHours = string.Empty;
+        private string _mostUsedCategoryName = NoDataText;
+        private string _mostUsedCategoryHours = string.Empty;
+        private string _longestSessionName = NoDataText;
+        private string _longestSessionHours = string.Empty;
         private string _peakProductivityTimeText = NoDataText;
         private string _averageSessionDurationText = NoDataText;
         private int _totalApplicationsUsed;
@@ -83,9 +86,16 @@ namespace SystemActivityTracker.ViewModels
         };
 
         // ── Insights (same period, same active sessions as the tree above) ───────────
-        public string MostUsedApplicationText => _mostUsedApplicationText;
-        public string MostUsedCategoryText => _mostUsedCategoryText;
-        public string LongestSessionText => _longestSessionText;
+        // Name and hours are separate properties (rather than one combined "Name (Xh Ym)"
+        // string) so the XAML can trim only the name when it's too long to fit — otherwise
+        // a long process/category name plus TextTrimming="CharacterEllipsis" would clip the
+        // "(Xh Ym)" suffix off the end first, making the hours silently disappear.
+        public string MostUsedApplicationNameText => _mostUsedApplicationName;
+        public string MostUsedApplicationHoursText => _mostUsedApplicationHours;
+        public string MostUsedCategoryNameText => _mostUsedCategoryName;
+        public string MostUsedCategoryHoursText => _mostUsedCategoryHours;
+        public string LongestSessionNameText => _longestSessionName;
+        public string LongestSessionHoursText => _longestSessionHours;
         public string PeakProductivityTimeText => _peakProductivityTimeText;
         public string AverageSessionDurationText => _averageSessionDurationText;
         public int TotalApplicationsUsed => _totalApplicationsUsed;
@@ -295,13 +305,16 @@ namespace SystemActivityTracker.ViewModels
             var byApp = activeEntries.GroupBy(e => e.ProcessName, StringComparer.OrdinalIgnoreCase).ToList();
 
             var topApp = byApp.OrderByDescending(SumDuration).First();
-            _mostUsedApplicationText = $"{topApp.Key} ({FormatHm(SumDuration(topApp))})";
+            _mostUsedApplicationName = topApp.Key;
+            _mostUsedApplicationHours = FormatHm(SumDuration(topApp));
 
             var topCategory = byCategory.OrderByDescending(kvp => SumDuration(kvp.Value)).First();
-            _mostUsedCategoryText = $"{topCategory.Key.Name} ({FormatHm(SumDuration(topCategory.Value))})";
+            _mostUsedCategoryName = topCategory.Key.Name;
+            _mostUsedCategoryHours = FormatHm(SumDuration(topCategory.Value));
 
             var longest = activeEntries.OrderByDescending(e => e.EndTime - e.StartTime).First();
-            _longestSessionText = $"{longest.ProcessName} ({FormatHm(longest.EndTime - longest.StartTime)})";
+            _longestSessionName = longest.ProcessName;
+            _longestSessionHours = FormatHm(longest.EndTime - longest.StartTime);
 
             var peakHour = activeEntries.GroupBy(e => e.StartTime.Hour).OrderByDescending(SumDuration).First().Key;
             _peakProductivityTimeText = FormatHourRange(peakHour);
@@ -315,9 +328,12 @@ namespace SystemActivityTracker.ViewModels
 
         private void ResetInsights()
         {
-            _mostUsedApplicationText = NoDataText;
-            _mostUsedCategoryText = NoDataText;
-            _longestSessionText = NoDataText;
+            _mostUsedApplicationName = NoDataText;
+            _mostUsedApplicationHours = string.Empty;
+            _mostUsedCategoryName = NoDataText;
+            _mostUsedCategoryHours = string.Empty;
+            _longestSessionName = NoDataText;
+            _longestSessionHours = string.Empty;
             _peakProductivityTimeText = NoDataText;
             _averageSessionDurationText = NoDataText;
             _totalApplicationsUsed = 0;
@@ -328,9 +344,12 @@ namespace SystemActivityTracker.ViewModels
         {
             OnPropertyChanged(nameof(HasData));
             OnPropertyChanged(nameof(TotalActiveText));
-            OnPropertyChanged(nameof(MostUsedApplicationText));
-            OnPropertyChanged(nameof(MostUsedCategoryText));
-            OnPropertyChanged(nameof(LongestSessionText));
+            OnPropertyChanged(nameof(MostUsedApplicationNameText));
+            OnPropertyChanged(nameof(MostUsedApplicationHoursText));
+            OnPropertyChanged(nameof(MostUsedCategoryNameText));
+            OnPropertyChanged(nameof(MostUsedCategoryHoursText));
+            OnPropertyChanged(nameof(LongestSessionNameText));
+            OnPropertyChanged(nameof(LongestSessionHoursText));
             OnPropertyChanged(nameof(PeakProductivityTimeText));
             OnPropertyChanged(nameof(AverageSessionDurationText));
             OnPropertyChanged(nameof(TotalApplicationsUsed));
