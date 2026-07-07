@@ -1519,6 +1519,11 @@ namespace SystemActivityTracker.ViewModels
                     RefreshMonthWeekSummary(weekNumber);
                 }
 
+                // Without this, MonthlyActiveTrackedText/MonthlyActiveText/MonthlyTotalActiveText
+                // (raised by NotifyMonthHeaderTotalsChanged below) keep reading the stale
+                // _monthlyAppUsage snapshot from the last full LoadMonthlyUsage() — see
+                // RebuildMonthlyAppUsage's comment for the full explanation.
+                RebuildMonthlyAppUsage();
                 NotifyMonthHeaderTotalsChanged();
             }
 
@@ -1534,6 +1539,7 @@ namespace SystemActivityTracker.ViewModels
 
             RefreshMonthDayCell(date);
             RefreshMonthWeekSummary(WorkWeekHelper.GetIsoWeekNumber(date));
+            RebuildMonthlyAppUsage();
             NotifyMonthHeaderTotalsChanged();
         }
 
@@ -1772,7 +1778,6 @@ namespace SystemActivityTracker.ViewModels
 
         private void LoadMonthlyUsage()
         {
-            _monthlyAppUsage.Clear();
             _monthlyCalendarDays.Clear();
             _monthlyWeeklySummaries.Clear();
 
@@ -1781,57 +1786,10 @@ namespace SystemActivityTracker.ViewModels
 
             var holidayDates = new System.Collections.Generic.HashSet<DateTime>(_holidayService.LoadYear(_selectedYear).Select(h => h.Date.Date));
 
-            var start = new DateTime(_selectedYear, _selectedMonth, 1);
-            var end = start.AddMonths(1).AddDays(-1);
-
             var (calendarStart, calendarEnd) = WorkWeekHelper.GetMonthCalendarGridRange(_selectedYear, _selectedMonth);
             MonthlyCalendarRowCount = (int)((calendarEnd - calendarStart).TotalDays + 1) / 7;
 
-            var perProcess = new System.Collections.Generic.Dictionary<string, (TimeSpan Active, TimeSpan Idle, TimeSpan Locked)>(StringComparer.OrdinalIgnoreCase);
-
-            // First pass: collect per-process data for the month
-            for (var date = start; date <= end; date = date.AddDays(1))
-            {
-                if (!_activityLogReader.TryReadDay(date.Date, out var entries))
-                {
-                    continue;
-                }
-
-                foreach (var entry in entries)
-                {
-                    var totals = HoursCalculationHelper.SumActivityEntries(new[] { entry });
-                    string processName = entry.ProcessName;
-                    if (string.IsNullOrWhiteSpace(processName))
-                    {
-                        processName = "(Unknown)";
-                    }
-
-                    if (!perProcess.TryGetValue(processName, out var existing))
-                    {
-                        existing = (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
-                    }
-
-                    perProcess[processName] = (
-                        existing.Active + totals.Active,
-                        existing.Idle + totals.Idle,
-                        existing.Locked + totals.Locked);
-                }
-            }
-
-            // Populate monthly app usage
-            foreach (var kvp in perProcess
-                         .OrderByDescending(k => k.Value.Active)
-                         .ThenByDescending(k => k.Value.Idle)
-                         .ThenByDescending(k => k.Value.Locked))
-            {
-                _monthlyAppUsage.Add(new MonthlyAppUsageDto
-                {
-                    ProcessName = kvp.Key,
-                    TotalActive = kvp.Value.Active,
-                    TotalIdle = kvp.Value.Idle,
-                    TotalLocked = kvp.Value.Locked
-                });
-            }
+            RebuildMonthlyAppUsage();
 
             // Second pass: populate calendar days with per-day data
             for (var date = calendarStart; date <= calendarEnd; date = date.AddDays(1))
@@ -2003,9 +1961,73 @@ namespace SystemActivityTracker.ViewModels
                 _monthHolidayDayCount++;
             }
 
-            IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
-
             NotifyMonthHeaderTotalsChanged();
+        }
+
+        // Rebuilds the per-process _monthlyAppUsage aggregate (the Monthly Usage tab's
+        // app-breakdown list, and the source for MonthlyActiveTrackedText/MonthlyActiveText/
+        // MonthlyTotalActiveText) by rescanning every day's log file for the selected month.
+        //
+        // Must be called not just from LoadMonthlyUsage() but also from every lighter-weight
+        // refresh path (RefreshDates, RefreshMonthSurfacesForDate) that updates today's
+        // MonthlyDayItem tile — those previously only called NotifyMonthHeaderTotalsChanged(),
+        // which re-raises PropertyChanged on these Text properties without recomputing the
+        // _monthlyAppUsage data they read from, so the header kept showing whatever totals
+        // existed at the last full LoadMonthlyUsage() (e.g. app startup) while the calendar
+        // tile for today kept growing throughout the day — always looking "too low" until
+        // the user switched months or restarted the app.
+        private void RebuildMonthlyAppUsage()
+        {
+            _monthlyAppUsage.Clear();
+
+            var start = new DateTime(_selectedYear, _selectedMonth, 1);
+            var end = start.AddMonths(1).AddDays(-1);
+
+            var perProcess = new System.Collections.Generic.Dictionary<string, (TimeSpan Active, TimeSpan Idle, TimeSpan Locked)>(StringComparer.OrdinalIgnoreCase);
+
+            for (var date = start; date <= end; date = date.AddDays(1))
+            {
+                if (!_activityLogReader.TryReadDay(date.Date, out var entries))
+                {
+                    continue;
+                }
+
+                foreach (var entry in entries)
+                {
+                    var totals = HoursCalculationHelper.SumActivityEntries(new[] { entry });
+                    string processName = entry.ProcessName;
+                    if (string.IsNullOrWhiteSpace(processName))
+                    {
+                        processName = "(Unknown)";
+                    }
+
+                    if (!perProcess.TryGetValue(processName, out var existing))
+                    {
+                        existing = (TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero);
+                    }
+
+                    perProcess[processName] = (
+                        existing.Active + totals.Active,
+                        existing.Idle + totals.Idle,
+                        existing.Locked + totals.Locked);
+                }
+            }
+
+            foreach (var kvp in perProcess
+                         .OrderByDescending(k => k.Value.Active)
+                         .ThenByDescending(k => k.Value.Idle)
+                         .ThenByDescending(k => k.Value.Locked))
+            {
+                _monthlyAppUsage.Add(new MonthlyAppUsageDto
+                {
+                    ProcessName = kvp.Key,
+                    TotalActive = kvp.Value.Active,
+                    TotalIdle = kvp.Value.Idle,
+                    TotalLocked = kvp.Value.Locked
+                });
+            }
+
+            IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
         }
 
         public string MonthlyActiveTrackedText
