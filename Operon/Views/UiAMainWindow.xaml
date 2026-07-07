@@ -2575,48 +2575,50 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- Application Categories Card -->
+                            <!-- Application Categories Card — compact layout: tighter padding/margins
+                                 throughout and smaller controls than the shared button/textbox styles'
+                                 defaults (overridden locally here only, so other views/tabs using those
+                                 same styles are unaffected). -->
                             <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0" DataContext="{Binding AppCategories}">
                                 <StackPanel>
-                                    <TextBlock Text="Application Categories" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,4"/>
-                                    <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" Margin="0,0,0,12"
+                                    <TextBlock Text="Application Categories" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,0,0,2"/>
+                                    <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" Margin="0,0,0,8" FontSize="11"
                                                Text="Group applications so Application Usage can break time down by category. Others catches anything not mapped and can't be deleted."/>
 
                                     <!-- Add category -->
-                                    <TextBlock Text="Add a category" Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"/>
-                                    <Grid Margin="0,0,0,4">
+                                    <Grid Margin="0,0,0,2">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Margin="0,0,8,0"
+                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Padding="6,4" Margin="0,0,6,0"
                                                  Text="{Binding NewCategoryName, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <Button Grid.Column="1" Content="Add Category" Style="{StaticResource SecondaryButtonStyle}"
+                                        <Button Grid.Column="1" Content="Add Category" Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" FontSize="12"
                                                 Command="{Binding AddCategoryCommand}"/>
                                     </Grid>
-                                    <TextBlock Text="{Binding SaveStatusText}" Style="{StaticResource SecondaryTextStyle}" Foreground="#059669" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{Binding SaveStatusText}" Style="{StaticResource SecondaryTextStyle}" Foreground="#059669" FontSize="11" Margin="0,0,0,6"/>
 
                                     <!-- Category list -->
                                     <ItemsControl ItemsSource="{Binding Categories}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:AppCategoryItem}">
-                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                                <Border Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,6">
                                                     <StackPanel>
-                                                        <Grid Margin="0,0,0,8">
+                                                        <Grid Margin="0,0,0,4">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" FontWeight="SemiBold" Margin="0,0,8,0"
+                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" FontWeight="SemiBold" Padding="6,4" Margin="0,0,6,0"
                                                                      IsReadOnly="{Binding IsProtected}"
                                                                      Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
-                                                            <Button Grid.Column="1" Content="Delete" Style="{StaticResource SecondaryButtonStyle}"
+                                                            <Button Grid.Column="1" Content="Delete" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
                                                                     Command="{Binding DataContext.DeleteCategoryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                     CommandParameter="{Binding}"
                                                                     Visibility="{Binding IsProtected, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                                                         </Grid>
 
-                                                        <ItemsControl ItemsSource="{Binding ProcessNames}" Margin="0,0,0,6">
+                                                        <ItemsControl ItemsSource="{Binding ProcessNames}" Margin="0,0,0,4">
                                                             <ItemsControl.ItemsPanel>
                                                                 <ItemsPanelTemplate>
                                                                     <WrapPanel/>
@@ -2624,10 +2626,10 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="10" Padding="8,3" Margin="0,0,6,6">
+                                                                    <Border Background="White" BorderBrush="#D1D5DB" BorderThickness="1" CornerRadius="9" Padding="6,2" Margin="0,0,4,4">
                                                                         <StackPanel Orientation="Horizontal">
-                                                                            <TextBlock Text="{Binding}" FontSize="12" VerticalAlignment="Center"/>
-                                                                            <Button Content="&#x2715;" Margin="6,0,0,0" Padding="2,0" Background="Transparent" BorderThickness="0"
+                                                                            <TextBlock Text="{Binding}" FontSize="11" VerticalAlignment="Center"/>
+                                                                            <Button Content="&#x2715;" Margin="4,0,0,0" Padding="2,0" Background="Transparent" BorderThickness="0"
                                                                                     FontSize="9" Foreground="#9CA3AF" Cursor="Hand"
                                                                                     Command="{Binding DataContext.RemoveProcessCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                                     CommandParameter="{Binding}"/>
@@ -2642,9 +2644,9 @@
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" Margin="0,0,8,0"
+                                                            <TextBox Style="{StaticResource UIATextBoxStyle}" Padding="6,4" Margin="0,0,6,0"
                                                                      Text="{Binding PendingProcessName, UpdateSourceTrigger=PropertyChanged}"/>
-                                                            <Button Grid.Column="1" Content="Add App" Style="{StaticResource SecondaryButtonStyle}"
+                                                            <Button Grid.Column="1" Content="Add App" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
                                                                     Command="{Binding AddProcessCommand}"/>
                                                         </Grid>
                                                     </StackPanel>
@@ -2654,32 +2656,32 @@
                                     </ItemsControl>
 
                                     <!-- Unknown applications -->
-                                    <Grid Margin="0,8,0,4">
+                                    <Grid Margin="0,4,0,2">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Detected unknown applications" Style="{StaticResource SectionHeaderTextStyle}" FontSize="15" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1" Content="Rescan" Style="{StaticResource SecondaryButtonStyle}"
+                                        <TextBlock Text="Detected unknown applications" Style="{StaticResource SectionHeaderTextStyle}" FontSize="13" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="Rescan" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
                                                 Command="{Binding ScanForNewAppsCommand}"/>
                                     </Grid>
-                                    <TextBlock Text="No new applications detected in the last 30 days." Style="{StaticResource SecondaryTextStyle}" Margin="0,0,0,4"
+                                    <TextBlock Text="No new applications detected in the last 30 days." Style="{StaticResource SecondaryTextStyle}" FontSize="11" Margin="0,0,0,2"
                                                Visibility="{Binding HasUnknownApps, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                                     <ItemsControl ItemsSource="{Binding UnknownApps}"
                                                   Visibility="{Binding HasUnknownApps, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:UnknownAppItem}">
-                                                <Grid Margin="0,0,0,6">
+                                                <Grid Margin="0,0,0,4">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="160"/>
+                                                        <ColumnDefinition Width="140"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}"/>
-                                                    <ComboBox Grid.Column="1" Margin="8,0,8,0"
+                                                    <TextBlock Text="{Binding ProcessName}" VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}" FontSize="12"/>
+                                                    <ComboBox Grid.Column="1" Padding="4,2" Margin="6,0,6,0"
                                                               ItemsSource="{Binding DataContext.Categories, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                               DisplayMemberPath="Name" SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
-                                                    <Button Grid.Column="2" Content="Assign" Style="{StaticResource SecondaryButtonStyle}"
+                                                    <Button Grid.Column="2" Content="Assign" Style="{StaticResource SecondaryButtonStyle}" Padding="8,3" FontSize="11"
                                                             Command="{Binding DataContext.AssignUnknownAppCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                             CommandParameter="{Binding}"/>
                                                 </Grid>
@@ -2687,7 +2689,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <Button Content="Save Categories" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch" Margin="0,10,0,0"
+                                    <Button Content="Save Categories" Style="{StaticResource PrimaryButtonStyle}" Padding="12,6" FontSize="12" HorizontalAlignment="Stretch" Margin="0,8,0,0"
                                             Command="{Binding SaveCommand}"/>
                                 </StackPanel>
                             </Border>

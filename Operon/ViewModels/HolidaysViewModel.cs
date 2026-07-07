@@ -25,7 +25,8 @@ namespace SystemActivityTracker.ViewModels
     // Manages the yearly public-holiday list shown on the Holidays tab. Self-contained
     // (own commands, own persistence via HolidayService) so it can be reused as-is by
     // Daily/Weekly/Monthly/Yearly report surfaces later without touching MainWindowViewModel.
-    // Not wired into expected-hours calculations yet — that's a follow-up.
+    // Wired into Month View's expected-hours calculation via MainWindowViewModel
+    // subscribing to HolidaysChanged below.
     public sealed class HolidaysViewModel : INotifyPropertyChanged
     {
         private readonly HolidayService _service;
@@ -288,7 +289,15 @@ namespace SystemActivityTracker.ViewModels
         {
             _service.SaveYear(SelectedYear, _yearEntries);
             LoadForSelectedYear();
+            HolidaysChanged?.Invoke(this, EventArgs.Empty);
         }
+
+        // Raised after every add/edit/delete that actually persists — lets consumers
+        // (e.g. MainWindowViewModel's Month View calendar/summary, which read holiday
+        // data once per LoadMonthlyUsage() call) know to recompute instead of staying
+        // stale until some unrelated refresh (month navigation, app restart) happens to
+        // reload them.
+        public event EventHandler? HolidaysChanged;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

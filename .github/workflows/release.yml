@@ -68,6 +68,12 @@ jobs:
           }
           Write-Host "Published: $($files[0].FullName) ($([math]::Round($files[0].Length / 1MB, 2)) MB)"
 
+          $gifs = Get-ChildItem .\publish\Assets -Filter *.gif -ErrorAction SilentlyContinue
+          if (-not $gifs -or $gifs.Count -eq 0) {
+            Write-Error "Expected Assets\*.gif files next to Operon.exe in publish output, found none."
+          }
+          Write-Host "Published GIF assets: $($gifs.Name -join ', ')"
+
       - name: Create release ZIP
         shell: pwsh
         run: |
@@ -75,7 +81,7 @@ jobs:
           if (Test-Path $zip) {
             Remove-Item $zip -Force
           }
-          Compress-Archive -Path .\publish\Operon.exe -DestinationPath $zip -CompressionLevel Optimal
+          Compress-Archive -Path .\publish\Operon.exe, .\publish\Assets -DestinationPath $zip -CompressionLevel Optimal
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
