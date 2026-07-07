@@ -2141,9 +2141,9 @@
                                              ControlTemplate uses Padding as the ScrollViewer's Margin (not internal
                                              padding around a flexible box), so the default Padding="8" (uniform)
                                              would squeeze the usable text area down to Height minus 2x8 = 20px and
-                                             clip the typed text — overridden here to "8,6" (24px usable) so the
-                                             text renders fully while the box still matches the row's height. -->
-                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Height="36" Padding="8,6"
+                                             clip the typed text — overridden here to a slim "2" (32px usable) so
+                                             the text renders fully while the box still matches the row's height. -->
+                                        <TextBox Style="{StaticResource UIATextBoxStyle}" Height="36" Padding="4"
                                                  Text="{Binding Holidays.FormName, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
