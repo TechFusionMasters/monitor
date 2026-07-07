@@ -379,11 +379,13 @@ namespace SystemActivityTracker.ViewModels
         private bool _hasSelectedDayLeave;
         private TimeSpan _weekExpectedHours = TimeSpan.FromHours(ExpectedHoursCalculator.StandardWeekHours);
         private TimeSpan _weekLeaveCredit = TimeSpan.Zero;
+        private TimeSpan _weekHolidayCredit = TimeSpan.Zero;
         private string _weekLeaveSummaryText = string.Empty;
         private bool _hasWeekLeave;
         private TimeSpan _weeklyLeaveDuration;
         private TimeSpan _monthLeaveCredit = TimeSpan.Zero;
         private TimeSpan _monthHolidayCredit = TimeSpan.Zero;
+        private int _monthHolidayDayCount;
         private DateTime? _runStartUtc;
         private TimeSpan _accumulatedRunTime = TimeSpan.Zero;
         private readonly DispatcherTimer _runningTimer = new DispatcherTimer();
@@ -434,11 +436,15 @@ namespace SystemActivityTracker.ViewModels
             AppUsageBreakdown = appUsageBreakdownViewModel ?? new AppUsageBreakdownViewModel(_activityLogReader);
             AppCategories.CategoriesSaved += (_, _) => AppUsageBreakdown.Refresh();
             // Without this, adding/editing/deleting a holiday on the Holidays tab left the
-            // Month View calendar (each day's IsHoliday flag) and Monthly Usage summary
-            // (Expected Hours' holiday deduction, via _monthHolidayCredit) showing stale
-            // data until some unrelated action (switching months, app restart) happened
-            // to call LoadMonthlyUsage() again.
-            Holidays.HolidaysChanged += (_, _) => LoadMonthlyUsage();
+            // Month View calendar (each day's IsHoliday flag), Monthly Usage summary
+            // (Expected Hours' holiday deduction, via _monthHolidayCredit), and the Week
+            // view's Expected Hours (via _weekHolidayCredit) showing stale data until some
+            // unrelated action (switching months/weeks, app restart) happened to reload them.
+            Holidays.HolidaysChanged += (_, _) =>
+            {
+                LoadMonthlyUsage();
+                RefreshWeekExpectedHours();
+            };
             TodayText = DateTime.Now.ToString("dddd, dd MMMM yyyy");
             _weekStartDate = WorkWeekHelper.GetWeekStartMonday(DateTime.Today);
             _weekPickerDate = DateTime.Today;
@@ -1445,6 +1451,7 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(MonthlyExpectedText));
             OnPropertyChanged(nameof(MonthlyActiveText));
             OnPropertyChanged(nameof(MonthlyLeaveText));
+            OnPropertyChanged(nameof(MonthlyHolidayCountText));
             OnPropertyChanged(nameof(MonthlyStatusText));
             OnPropertyChanged(nameof(MonthlyStatusKind));
             OnPropertyChanged(nameof(MonthlyStatusLabel));
@@ -1650,8 +1657,20 @@ namespace SystemActivityTracker.ViewModels
 
             var leaveDayCount = leaveEntries.Count(e => e != null);
 
-            // Expected is always 40h — leave does NOT reduce it.
-            _weekExpectedHours = ExpectedHoursCalculator.GetWeekExpectedHours();
+            // Expected is always 40h and leave does NOT reduce it — but public holidays
+            // do, same exclusion rule as Monthly Usage's GetMonthlyExpectedHoursAdjusted().
+            // Reuses WorkSummaryCalculator's day-level holiday-credit helper; does not
+            // touch ExpectedHoursCalculator.GetWeekExpectedHours() itself.
+            _weekHolidayCredit = TimeSpan.Zero;
+            foreach (var date in WorkWeekHelper.EnumerateWeekDays(weekStart))
+            {
+                _weekHolidayCredit += WorkSummaryCalculator.GetDayHolidayCredit(date, _holidayService.IsHoliday(date));
+            }
+
+            var baseWeekExpected = ExpectedHoursCalculator.GetWeekExpectedHours();
+            var adjustedWeekExpected = baseWeekExpected - _weekHolidayCredit;
+            _weekExpectedHours = adjustedWeekExpected < TimeSpan.Zero ? TimeSpan.Zero : adjustedWeekExpected;
+
             _weekLeaveCredit = ExpectedHoursCalculator.GetWeekLeaveCredit(
                 weekStart,
                 date => _leaveService.GetForDate(date)?.Duration);
@@ -1972,9 +1991,16 @@ namespace SystemActivityTracker.ViewModels
             // ExpectedHoursCalculator.GetMonthExpectedHours itself (still used unadjusted
             // elsewhere) or any other view's calculations.
             _monthHolidayCredit = TimeSpan.Zero;
+            _monthHolidayDayCount = 0;
             foreach (var holidayDate in WorkSummaryCalculator.EnumerateMonthView(_selectedYear, _selectedMonth, DateTime.Today))
             {
-                _monthHolidayCredit += WorkSummaryCalculator.GetDayHolidayCredit(holidayDate, holidayDates.Contains(holidayDate.Date));
+                if (!holidayDates.Contains(holidayDate.Date))
+                {
+                    continue;
+                }
+
+                _monthHolidayCredit += WorkSummaryCalculator.GetDayHolidayCredit(holidayDate, isHoliday: true);
+                _monthHolidayDayCount++;
             }
 
             IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
@@ -2020,6 +2046,11 @@ namespace SystemActivityTracker.ViewModels
         }
 
         public string MonthlyLeaveText => FormatTimeSpan(_monthLeaveCredit);
+
+        // Shown as a 4th "Holiday" legend chip next to Active/Offline/Leave — a day count
+        // rather than an hours total, since holiday hours never contribute Active time and
+        // a count is what explains the Expected Hours deduction above (_monthHolidayCredit).
+        public string MonthlyHolidayCountText => _monthHolidayDayCount == 1 ? "1 day" : $"{_monthHolidayDayCount} days";
 
         // TotalActive = tracked + manual + leave.
         public string MonthlyTotalActiveText
@@ -2083,12 +2114,15 @@ namespace SystemActivityTracker.ViewModels
             _ => "✓" // checkmark
         };
 
-        // 0-100 — drives the donut ring's fill and the big percentage readout.
-        // Progress = Total Active Hours (tracked + manual) + Leave, same as MonthlyStatusKind.
+        // Drives the donut ring's fill and the big percentage readout. Progress = Total
+        // Active Hours (tracked + manual) + Leave, same as MonthlyStatusKind.
         //
-        // Only ever returns exactly 100 when progress >= expected (a precise TimeSpan/tick
-        // comparison, not a rounded-hours one). Otherwise this is the true ratio (no
-        // artificial cap) — e.g. 175h33m/176h is exactly 99.74, not rounded/forced to 100.
+        // No upper cap: below 100% this is the true ratio (e.g. 175h33m/176h is exactly
+        // 99.74, never rounded/forced to 100), and once hours exceed Expected it keeps
+        // climbing past 100 (e.g. 110h/100h is exactly 110) instead of flattening out at
+        // "100%" the moment the target is reached — that flattening previously hid how
+        // much extra was worked. CircularProgressRing clamps internally when rendering
+        // the arc itself, so a value above 100 just draws as a full ring, never crashes.
         public double MonthlyProgressPercent
         {
             get
@@ -2103,26 +2137,22 @@ namespace SystemActivityTracker.ViewModels
                     return progress > TimeSpan.Zero ? 100.0 : 0.0;
                 }
 
-                if (progress >= expected)
-                {
-                    return 100.0;
-                }
-
                 var ratio = progress.TotalSeconds / expected.TotalSeconds * 100.0;
-                return Math.Clamp(ratio, 0.0, 100.0);
+                return ratio < 0.0 ? 0.0 : ratio;
             }
         }
 
         // Up to 2 decimal places (trailing zeros trimmed) so a near-complete month reads
-        // as e.g. "99.74%" instead of rounding to a misleading "100%"; only shows the bare
-        // "100%" once MonthlyProgressPercent itself is exactly 100 (progress >= expected).
+        // as e.g. "99.74%" instead of rounding to a misleading "100%", and an overworked
+        // month reads as e.g. "110%" instead of flattening at "100%". Only the exact
+        // completion point (progress == expected, to the tick) shows the bare "100%".
         public string MonthlyProgressPercentText =>
-            MonthlyProgressPercent >= 100.0 ? "100%" : $"{MonthlyProgressPercent:0.##}%";
+            MonthlyProgressPercent == 100.0 ? "100%" : $"{MonthlyProgressPercent:0.##}%";
 
-        // Same Progress/Expected comparison as MonthlyProgressPercent, but NOT clamped
-        // at 100 — the donut's fill percentage is intentionally capped for display, but
-        // the monthly GIF indicator needs to tell 100-110% apart from >110%, which a
-        // clamped value can't represent.
+        // Same Progress/Expected ratio as MonthlyProgressPercent (both are uncapped now),
+        // except when there's no Expected Hours at all: Percent shows 100/0 based on
+        // whether any progress exists (a sensible display default), while Raw stays 0 so
+        // it can't accidentally land in the GIF's 90-110%+ threshold bands below.
         public double MonthlyProgressPercentRaw
         {
             get
