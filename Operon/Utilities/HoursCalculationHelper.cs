@@ -182,7 +182,13 @@ namespace SystemActivityTracker.Utilities
         /// Sums TotalActive (tracked + manual + leave) for in-month days in the given ISO week.
         /// Correctly excludes days from adjacent months when a week crosses a month boundary.
         /// </summary>
-        public static TimeSpan SumInMonthWeekTotalActive(
+        // Burnt Hours for the Month View calendar's per-week Summary column: actual worked
+        // time (tracked + manual) for that week's in-month days — regardless of leave/holiday
+        // flags, since work done on a leave or holiday day still counts as burnt. Deliberately
+        // excludes LeaveCredit (unlike the old SumInMonthWeekTotalActive this replaces), since
+        // leave credit is time off, not time worked. Future days naturally contribute zero
+        // (no tracked data exists yet), so no separate month-to-date cutoff is needed here.
+        public static TimeSpan SumBurntHoursForWeek(
             IEnumerable<MonthlyDayItemLike> days,
             int isoWeekNumber,
             int year,
@@ -193,7 +199,39 @@ namespace SystemActivityTracker.Utilities
                     && d.Date.Year == year
                     && d.Date.Month == month
                     && WorkWeekHelper.GetIsoWeekNumber(d.Date) == isoWeekNumber)
-                .Sum(d => Math.Max(0, (d.TrackedActive + d.Manual + d.LeaveCredit).TotalSeconds)));
+                .Sum(d => Math.Max(0, (d.TrackedActive + d.Manual).TotalSeconds)));
+        }
+
+        // Expected Hours for the Month View calendar's per-week Summary column — same rule as
+        // the Monthly Usage summary's GetMonthlyExpectedHoursAdjusted(): 8h per Mon-Fri
+        // in-month day, minus that day's holiday credit (holiday hours excluded). Leave does
+        // NOT reduce this — a leave day still counts as its full 8h expected, i.e. leave hours
+        // are "included" the same way the monthly figure treats them. Also month-to-date aware
+        // like the monthly figure: days after `today` don't count yet, so a week that's only
+        // partially elapsed doesn't show its full 40h before that time has passed.
+        public static TimeSpan GetExpectedHoursForWeek(
+            IEnumerable<MonthlyDayItemLike> days,
+            int isoWeekNumber,
+            int year,
+            int month,
+            DateTime today)
+        {
+            var weekDays = days.Where(d => d.IsCurrentMonth
+                && d.Date.Year == year
+                && d.Date.Month == month
+                && WorkWeekHelper.GetIsoWeekNumber(d.Date) == isoWeekNumber
+                && d.Date.Date <= today.Date);
+
+            var baseExpected = TimeSpan.Zero;
+            var holidayCredit = TimeSpan.Zero;
+            foreach (var d in weekDays)
+            {
+                baseExpected += ExpectedHoursCalculator.GetDayExpectedHours(d.Date);
+                holidayCredit += WorkSummaryCalculator.GetDayHolidayCredit(d.Date, d.IsHoliday);
+            }
+
+            var expected = baseExpected - holidayCredit;
+            return expected < TimeSpan.Zero ? TimeSpan.Zero : expected;
         }
 
         public static int SumManualSecondsForMonth(int year, int month, Func<DateTime, int> getManualSecondsForDate)
@@ -217,6 +255,7 @@ namespace SystemActivityTracker.Utilities
             TimeSpan TrackedActive { get; }
             TimeSpan Manual { get; }
             TimeSpan LeaveCredit { get; }
+            bool IsHoliday { get; }
         }
     }
 }

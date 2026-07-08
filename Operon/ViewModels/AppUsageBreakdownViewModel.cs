@@ -312,18 +312,80 @@ namespace SystemActivityTracker.ViewModels
             _mostUsedCategoryName = topCategory.Key.Name;
             _mostUsedCategoryHours = FormatHm(SumDuration(topCategory.Value));
 
-            var longest = activeEntries.OrderByDescending(e => e.EndTime - e.StartTime).First();
-            _longestSessionName = longest.ProcessName;
-            _longestSessionHours = FormatHm(longest.EndTime - longest.StartTime);
-
             var peakHour = activeEntries.GroupBy(e => e.StartTime.Hour).OrderByDescending(SumDuration).First().Key;
             _peakProductivityTimeText = FormatHourRange(peakHour);
 
-            var totalTicks = activeEntries.Sum(e => (e.EndTime - e.StartTime).Ticks);
-            _averageSessionDurationText = FormatHm(TimeSpan.FromTicks(totalTicks / activeEntries.Count));
+            // Longest/Average/Total Sessions all mean a continuous block of time in one app —
+            // but TrackingService writes a new ActivityLogEntry row every time the window
+            // TITLE changes, not just the process (see the record-rotation condition in
+            // TrackingService), so a single long browsing/coding session is split across many
+            // short, genuinely back-to-back rows. Treating each raw row as its own "session"
+            // made Longest/Average measure title-change fragments (often just seconds) instead
+            // of real usage length, rounding down to "0h 0m" almost every time.
+            // MergeIntoSessionBlocks (also used by BuildSessionNodes for the tree's Session
+            // rows, so both can't drift apart) collapses only truly contiguous consecutive
+            // same-process rows back into one session first — no gap-tolerance threshold, so a
+            // real interruption always starts a new session; Most Used Application/Category are
+            // unaffected since they already sum across all rows per app regardless of
+            // fragmentation.
+            var sessions = MergeIntoSessionBlocks(activeEntries.OrderBy(e => e.StartTime).ToList());
+
+            var longest = sessions.OrderByDescending(s => s.End - s.Start).First();
+            _longestSessionName = longest.ProcessName;
+            _longestSessionHours = FormatHm(longest.End - longest.Start);
+
+            var totalSessionTicks = sessions.Sum(s => (s.End - s.Start).Ticks);
+            _averageSessionDurationText = FormatHm(TimeSpan.FromTicks(totalSessionTicks / sessions.Count));
 
             _totalApplicationsUsed = byApp.Count;
-            _totalSessions = activeEntries.Count;
+            _totalSessions = sessions.Count;
+        }
+
+        // Merges time-ordered entries into logical session blocks: consecutive rows for the
+        // same process with no gap between them (the next row's StartTime is at or before the
+        // running block's current EndTime — i.e. genuinely back-to-back or overlapping) count
+        // as one continuous session. A different process, or any real time gap, ends the
+        // current block and starts a new one — no tolerance threshold, so only data that
+        // unambiguously belongs to the same session is merged. Shared by ComputeInsights
+        // (Longest/Average/Total Session stats) and BuildSessionNodes (the tree's Session rows)
+        // so the two can't define "session" differently.
+        private static List<(string ProcessName, DateTime Start, DateTime End)> MergeIntoSessionBlocks(
+            List<ActivityLogEntry> orderedEntries)
+        {
+            var blocks = new List<(string ProcessName, DateTime Start, DateTime End)>();
+            if (orderedEntries.Count == 0)
+            {
+                return blocks;
+            }
+
+            var groupProcessName = orderedEntries[0].ProcessName;
+            var groupStart = orderedEntries[0].StartTime;
+            var groupEnd = orderedEntries[0].EndTime;
+
+            for (int i = 1; i < orderedEntries.Count; i++)
+            {
+                var entry = orderedEntries[i];
+                bool sameProcess = string.Equals(entry.ProcessName, groupProcessName, StringComparison.OrdinalIgnoreCase);
+                bool contiguous = entry.StartTime <= groupEnd;
+
+                if (sameProcess && contiguous)
+                {
+                    if (entry.EndTime > groupEnd)
+                    {
+                        groupEnd = entry.EndTime;
+                    }
+                }
+                else
+                {
+                    blocks.Add((groupProcessName, groupStart, groupEnd));
+                    groupProcessName = entry.ProcessName;
+                    groupStart = entry.StartTime;
+                    groupEnd = entry.EndTime;
+                }
+            }
+
+            blocks.Add((groupProcessName, groupStart, groupEnd));
+            return blocks;
         }
 
         private void ResetInsights()
@@ -432,15 +494,24 @@ namespace SystemActivityTracker.ViewModels
             return nodes;
         }
 
-        private static List<UsageTreeNode> BuildSessionNodes(List<ActivityLogEntry> entries) => entries
-            .OrderBy(e => e.StartTime)
-            .Select(e => new UsageTreeNode(
-                UsageNodeKind.Session,
-                string.IsNullOrWhiteSpace(e.WindowTitle) ? e.ProcessName : e.WindowTitle,
-                e.EndTime - e.StartTime,
-                sessionStart: e.StartTime,
-                sessionEnd: e.EndTime))
-            .ToList();
+        // Groups only truly contiguous consecutive same-process rows into one Session node,
+        // via the same MergeIntoSessionBlocks used by ComputeInsights, so a session here means
+        // the same thing it does there. A different process in between, or any real time gap,
+        // still ends the current group and starts a new one — no gap-tolerance threshold, so
+        // re-focusing the same app later shows as a separate session rather than being merged
+        // across an interruption. Each row shows just the app name (not window title, which
+        // can change several times within one merged session), the earliest start time, the
+        // latest end time, and the total duration. Chronological order is preserved
+        // throughout.
+        private static List<UsageTreeNode> BuildSessionNodes(List<ActivityLogEntry> entries) =>
+            MergeIntoSessionBlocks(entries.OrderBy(e => e.StartTime).ToList())
+                .Select(b => new UsageTreeNode(
+                    UsageNodeKind.Session,
+                    b.ProcessName,
+                    b.End - b.Start,
+                    sessionStart: b.Start,
+                    sessionEnd: b.End))
+                .ToList();
 
         private static TimeSpan SumDuration(IEnumerable<ActivityLogEntry> entries) =>
             TimeSpan.FromTicks(entries.Sum(e => (e.EndTime - e.StartTime).Ticks));
