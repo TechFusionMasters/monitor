@@ -655,8 +655,10 @@
                                         <!-- 5: Burnt Hours -->
                                         <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock Text="Burnt Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
-                                            <!-- Total shown = Active + Offline + Leave (MonthlyTotalActiveText),
-                                                 matching the full sum of all three segments in the donut. -->
+                                            <!-- MonthlyTotalActiveText = tracked + manual only (no leave credit), the
+                                                 same definition each week row's Burnt pill uses (SumBurntHoursForWeek)
+                                                 and the same value UiB's "Total Active" figure reads — summing every
+                                                 week's Burnt Hours for the month equals this value. -->
                                             <TextBlock Text="{Binding MonthlyTotalActiveText}" FontSize="15" FontWeight="Bold"
                                                        Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>

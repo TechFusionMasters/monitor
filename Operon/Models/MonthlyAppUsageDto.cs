@@ -20,11 +20,15 @@ namespace SystemActivityTracker.Models
         public string TotalIdleText => FormatTotalHoursMinutes(TotalIdle);
         public string TotalLockedText => FormatTotalHoursMinutes(TotalLocked);
 
+        // TEMP DIAGNOSTIC: seconds appended (":SS") to help pinpoint a reported minute-level
+        // mismatch between Day/Week/Month/Week Report totals. Revert to the 2-arg "{0:00}:
+        // {1:00}" format once confirmed.
         private static string FormatTotalHoursMinutes(TimeSpan value)
         {
             int totalHours = (int)value.TotalHours;
             int minutes = value.Minutes;
-            return $"{totalHours:00}:{minutes:00}";
+            int seconds = value.Seconds;
+            return $"{totalHours:00}:{minutes:00}:{seconds:00}";
         }
     }
 }
