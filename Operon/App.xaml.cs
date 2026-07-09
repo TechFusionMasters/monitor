@@ -25,6 +25,7 @@ namespace SystemActivityTracker
         private SessionStateService? _sessionStateService;
         private TrackingService? _trackingService;
         private TrayIconService? _trayIconService;
+        private FloatingTimerService? _floatingTimerService;
         private SettingsService? _settingsService;
         private CloseTrackingService? _closeTrackingService;
         private DispatcherTimer? _uiHeartbeatTimer;
@@ -35,6 +36,7 @@ namespace SystemActivityTracker
 
         public TrackingService? TrackingService => _trackingService;
         public SettingsService? SettingsService => _settingsService;
+        public FloatingTimerService? FloatingTimerService => _floatingTimerService;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -146,6 +148,11 @@ namespace SystemActivityTracker
             _sessionStateService = Services.GetRequiredService<SessionStateService>();
             _trackingService = Services.GetRequiredService<TrackingService>();
             _trayIconService = new TrayIconService(this, _trackingService);
+            _floatingTimerService = new FloatingTimerService(
+                this,
+                _settingsService,
+                () => _trayIconService.ShowMainWindow(),
+                () => _trayIconService.ExitApplication());
 
             SystemEvents.SessionEnding += OnSystemSessionEnding;
 
@@ -311,6 +318,8 @@ namespace SystemActivityTracker
                 _closeTrackingService = null;
             }
 
+            _floatingTimerService?.Shutdown();
+            _floatingTimerService = null;
             _trayIconService?.Dispose();
             _trayIconService = null;
             _trackingService?.Shutdown();

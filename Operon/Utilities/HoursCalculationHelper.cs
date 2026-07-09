@@ -42,7 +42,8 @@ namespace SystemActivityTracker.Utilities
                 }
             }
 
-            public string ExpectedText => FormatHm(Expected);
+            // Standard "Expected" hours format app-wide ("Xh Ym", or "Xh" when minutes is 0).
+            public string ExpectedText => Expected.ToExpectedHoursText();
             public string ActiveText => FormatHm(Active);
             public string LeaveText => FormatHm(Leave);
             public string TotalActiveText => FormatHm(TotalActive);

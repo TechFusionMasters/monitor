@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Forms;
 using SystemActivityTracker.Models;
+using SystemActivityTracker.ViewModels;
 using SystemActivityTracker.Views;
 
 namespace SystemActivityTracker.Services
@@ -12,6 +13,10 @@ namespace SystemActivityTracker.Services
         private readonly App _app;
         private readonly TrackingService _trackingService;
         private readonly NotifyIcon _notifyIcon;
+        private readonly ToolStripMenuItem _todayTotalItem;
+        private readonly ToolStripMenuItem _activeItem;
+        private readonly ToolStripMenuItem _offlineItem;
+        private readonly ToolStripMenuItem _statusItem;
         private bool _disposed;
 
         public TrayIconService(App app, TrackingService trackingService)
@@ -42,12 +47,45 @@ namespace SystemActivityTracker.Services
                 Visible = true
             };
 
+            // Same labels/values as the floating timer's quick-info menu (FloatingTimerWindow.xaml)
+            // — both read from the identical MainWindowViewModel.TodayQuick* properties, just
+            // WinForms can't data-bind them, so they're refreshed on-demand in the Opening
+            // handler below instead of continuously.
+            var todayHeaderItem = new ToolStripMenuItem("Today") { Enabled = false, Font = new System.Drawing.Font(Control.DefaultFont, System.Drawing.FontStyle.Bold) };
+            _todayTotalItem = new ToolStripMenuItem("Today Total: —") { Enabled = false, Font = new System.Drawing.Font(Control.DefaultFont, System.Drawing.FontStyle.Bold) };
+            _activeItem = new ToolStripMenuItem("Active: —") { Enabled = false };
+            _offlineItem = new ToolStripMenuItem("Offline Work: —") { Enabled = false };
+            _statusItem = new ToolStripMenuItem("Status: —") { Enabled = false };
+
             var contextMenu = new ContextMenuStrip();
+            contextMenu.Items.Add(todayHeaderItem);
+            contextMenu.Items.Add(_todayTotalItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(_activeItem);
+            contextMenu.Items.Add(_offlineItem);
+            contextMenu.Items.Add(_statusItem);
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add(GetString("TrayMenuOpen", "Open"), null, (_, __) => ShowMainWindow());
             contextMenu.Items.Add(GetString("TrayMenuExit", "Exit"), null, (_, __) => ExitApplication());
+            contextMenu.Opening += (_, __) => RefreshQuickInfo();
 
             _notifyIcon.ContextMenuStrip = contextMenu;
             _notifyIcon.DoubleClick += (_, __) => ShowMainWindow();
+        }
+
+        // Pulls fresh values from whichever MainWindowViewModel is currently active right
+        // before the menu displays — matches the on-open-snapshot approach used for the
+        // floating timer's menu; there's no per-second ticking here since a WinForms
+        // ContextMenuStrip isn't open long enough for that to matter.
+        private void RefreshQuickInfo()
+        {
+            if (_app.MainWindow?.DataContext is MainWindowViewModel vm)
+            {
+                _todayTotalItem.Text = $"Today Total: {vm.TodayQuickTotalText}";
+                _activeItem.Text = $"Active: {vm.TodayQuickActiveText}";
+                _offlineItem.Text = $"Offline Work: {vm.TodayQuickOfflineText}";
+                _statusItem.Text = $"Status: {vm.TodayQuickStatusText}";
+            }
         }
 
         private static System.Drawing.Icon GetAppIcon()
@@ -71,7 +109,10 @@ namespace SystemActivityTracker.Services
             return System.Drawing.SystemIcons.Application;
         }
 
-        private void ShowMainWindow()
+        // Internal (not private): FloatingTimerService's double-click handler reuses this
+        // exact restore logic so reopening from the floating timer behaves identically to
+        // reopening from the tray icon (same window either minimized or hidden-to-tray).
+        internal void ShowMainWindow()
         {
             _app.Dispatcher.Invoke(() =>
             {
@@ -115,7 +156,10 @@ namespace SystemActivityTracker.Services
             });
         }
 
-        private void ExitApplication()
+        // Internal (not private): FloatingTimerService's "Shutdown Operon" quick action
+        // reuses this exact exit path (flush the current record, then shut down) so it
+        // behaves identically to the tray menu's "Exit" and the main window's Exit button.
+        internal void ExitApplication()
         {
             _app.Dispatcher.Invoke(() =>
             {

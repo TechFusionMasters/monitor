@@ -254,10 +254,12 @@ namespace SystemActivityTracker.ViewModels
                 OnPropertyChanged(nameof(ExpectedHoursText));
             }
         }
-        // TEMP DIAGNOSTIC: seconds appended to help pinpoint a reported minute-level mismatch
-        // between Day/Week/Month/Week Report totals. Revert to "{h}h {m}m" once confirmed.
+        // TEMP DIAGNOSTIC (BurntHoursText only): seconds appended to help pinpoint a reported
+        // minute-level mismatch between Day/Week/Month/Week Report totals. Revert to
+        // "{h}h {m}m" once confirmed. ExpectedHoursText uses the standard, permanent
+        // "Xh Ym"/"Xh" Expected-hours format used everywhere else.
         public string BurntHoursText => $"{(int)BurntHours.TotalHours}h {BurntHours.Minutes}m {BurntHours.Seconds}s";
-        public string ExpectedHoursText => $"{(int)ExpectedHours.TotalHours}h {ExpectedHours.Minutes}m {ExpectedHours.Seconds}s";
+        public string ExpectedHoursText => ExpectedHours.ToExpectedHoursText();
         public override bool IsWeeklySummary => true;
         public override bool IsCurrentMonth { get => _isCurrentMonth; set => _isCurrentMonth = value; }
         public override bool IsWeekend => false;
@@ -337,6 +339,7 @@ namespace SystemActivityTracker.ViewModels
         private int _pollIntervalSeconds;
         private bool _enableLiveRefresh;
         private int _liveRefreshIntervalSeconds;
+        private bool _showFloatingTimerOnMinimize = true;
         private bool _isTestMode;
         private int _crashLogRetentionDays;
         private int _crashLogMaxSizeMB;
@@ -422,10 +425,27 @@ namespace SystemActivityTracker.ViewModels
         private string _headerTimerSeconds = "00";
         private bool _isHeaderTimerLive;
         private TimeSpan _headerActiveBase = TimeSpan.Zero;
+        // Manual/offline portion of _headerActiveBase, tracked separately so the floating
+        // timer's quick-info menu can show Active and Offline as two distinct live figures
+        // instead of only their combined total (_headerActiveBase = tracked + manual, seeded
+        // in ResetHeaderActiveTickerForNewRun/SyncHeaderActiveBaseFromSummary alongside it).
+        // Manual time doesn't tick live on its own (it's discrete logged entries, not a
+        // running clock), so this needs no separate live-delta handling.
+        private TimeSpan _headerManualBase = TimeSpan.Zero;
+        // Today's leave credit (0 unless a leave entry exists for today), cached rather
+        // than re-read from disk on every RefreshHeaderActiveTimer tick — kept in sync at
+        // the same points _headerManualBase is (day sync/reset) plus RefreshLeaveSurfacesForDate
+        // when the changed date is today. Deliberately does NOT include holiday credit —
+        // "Today Total" must exclude holiday hours per its definition.
+        private TimeSpan _headerLeaveCreditToday = TimeSpan.Zero;
         private DateTime? _headerActiveStartLocal;
         private DateTime? _headerActiveLastRecordStartLocal;
         private int _lastDisplayedActiveSecond = -1;
         private string _headerActiveTimerText = "00:00:00";
+        private string _todayQuickTotalText = "0h";
+        private string _todayQuickActiveText = "0h";
+        private string _todayQuickOfflineText = "0h";
+        private string _todayQuickStatusText = string.Empty;
         private readonly DispatcherTimer _autoRefreshTimer = new DispatcherTimer();
         private AppSettings _settingsSnapshot = new AppSettings();
 
@@ -571,6 +591,7 @@ namespace SystemActivityTracker.ViewModels
             LiveRefreshIntervalSeconds = settings.LiveRefreshIntervalSeconds;
             CrashLogRetentionDays = settings.CrashLogRetentionDays;
             CrashLogMaxSizeMB = settings.CrashLogMaxSizeMB;
+            _showFloatingTimerOnMinimize = settings.ShowFloatingTimerOnMinimize;
 
             if (settings.AutoStartTrackingOnLaunch)
             {
@@ -706,7 +727,10 @@ namespace SystemActivityTracker.ViewModels
         {
             // UI-only reset so Stop -> Start doesn't reuse a stale start timestamp from a previous run.
             // Keep the base as the already-recorded total active for today; the live delta starts fresh.
-            _headerActiveBase = ComputeHeaderTimerTotalForDate(DateTime.Today);
+            var (trackedActive, manual) = ComputeHeaderTimerBaseComponents(DateTime.Today);
+            _headerActiveBase = trackedActive + manual;
+            _headerManualBase = manual;
+            RefreshHeaderLeaveCreditToday();
 
             _headerActiveStartLocal = DateTime.Now;
             _headerActiveLastRecordStartLocal = null;
@@ -788,6 +812,78 @@ namespace SystemActivityTracker.ViewModels
                 if (!string.Equals(_headerActiveTimerText, value, StringComparison.Ordinal))
                 {
                     _headerActiveTimerText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Today's live Today Total/Active/Offline/Status, shown in both the floating
+        // timer's and the tray icon's quick-info menus (same labels/values in both — see
+        // FloatingTimerWindow.xaml and TrayIconService). Always DateTime.Today, deliberately
+        // NOT tied to SelectedDate (which the user may have navigated away from in the Day
+        // view) — updated alongside the header timer in RefreshHeaderActiveTimer, at the
+        // same once-per-second cadence, using the exact same tracked-active/manual sources
+        // as Total Active/Burnt Hours elsewhere (HoursCalculationHelper.SumActiveOnly /
+        // GetManualSecondsForDate) so nothing here can drift from those.
+        //
+        // Today Total = Active + Offline Work + Leave, excluding holiday hours (holiday
+        // credit is never added to any of these — it only ever reduces Expected Hours
+        // elsewhere in the app, never worked/credited time). Full TimeSpan-tick precision
+        // is kept throughout; only the final display text truncates to whole minutes (no
+        // intermediate rounding).
+        public string TodayQuickTotalText
+        {
+            get => _todayQuickTotalText;
+            private set
+            {
+                if (!string.Equals(_todayQuickTotalText, value, StringComparison.Ordinal))
+                {
+                    _todayQuickTotalText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Tracked active time only (no manual, no leave).
+        public string TodayQuickActiveText
+        {
+            get => _todayQuickActiveText;
+            private set
+            {
+                if (!string.Equals(_todayQuickActiveText, value, StringComparison.Ordinal))
+                {
+                    _todayQuickActiveText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Manual/offline work only (no tracked active, no leave).
+        public string TodayQuickOfflineText
+        {
+            get => _todayQuickOfflineText;
+            private set
+            {
+                if (!string.Equals(_todayQuickOfflineText, value, StringComparison.Ordinal))
+                {
+                    _todayQuickOfflineText = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // Exactly one of "Remaining: Xh Ym" (before target) / "Achieved" (target reached) /
+        // "Overtime: Xh Ym" (past target), comparing Today Total (Active + Offline + Leave)
+        // against ExpectedHoursCalculator.GetDayExpectedHours — the same 8h-on-weekdays rule
+        // used everywhere else, with no holiday-hours involvement.
+        public string TodayQuickStatusText
+        {
+            get => _todayQuickStatusText;
+            private set
+            {
+                if (!string.Equals(_todayQuickStatusText, value, StringComparison.Ordinal))
+                {
+                    _todayQuickStatusText = value;
                     OnPropertyChanged();
                 }
             }
@@ -910,15 +1006,73 @@ namespace SystemActivityTracker.ViewModels
             HeaderTimerHours = string.Format(CultureInfo.InvariantCulture, "{0:00}", hours);
             HeaderTimerMinutes = string.Format(CultureInfo.InvariantCulture, "{0:00}", minutes);
             HeaderTimerSeconds = string.Format(CultureInfo.InvariantCulture, "{0:00}", seconds);
+
+            // Active = total minus the (static, non-ticking) manual/offline portion.
+            var offlineToday = _headerManualBase;
+            var activeToday = total - offlineToday;
+            if (activeToday < TimeSpan.Zero)
+            {
+                activeToday = TimeSpan.Zero;
+            }
+
+            // Today Total = Active + Offline Work + Leave, excluding holiday hours (holiday
+            // credit never enters here — see _headerLeaveCreditToday's comment). Full
+            // TimeSpan-tick precision throughout; only FormatQuickMenuHours's final display
+            // truncates to whole minutes, with no intermediate rounding.
+            var todayTotal = activeToday + offlineToday + _headerLeaveCreditToday;
+
+            TodayQuickTotalText = FormatQuickMenuHours(todayTotal);
+            TodayQuickActiveText = FormatQuickMenuHours(activeToday);
+            TodayQuickOfflineText = FormatQuickMenuHours(offlineToday);
+
+            var expectedToday = ExpectedHoursCalculator.GetDayExpectedHours(DateTime.Today);
+            var statusDiff = todayTotal - expectedToday;
+            if (statusDiff < TimeSpan.Zero)
+            {
+                TodayQuickStatusText = $"Remaining: {FormatQuickMenuHours(-statusDiff)}";
+            }
+            else if (statusDiff > TimeSpan.Zero)
+            {
+                TodayQuickStatusText = $"Overtime: {FormatQuickMenuHours(statusDiff)}";
+            }
+            else
+            {
+                TodayQuickStatusText = "Achieved";
+            }
+        }
+
+        // Always "Xh Ym" — unlike ToExpectedHoursText (which omits minutes when 0, e.g. just
+        // "8h"), the quick-info menus (floating timer + tray) always show both units so a
+        // value is never just a bare, ambiguous-looking hour number like "0h".
+        private static string FormatQuickMenuHours(TimeSpan span)
+        {
+            int hours = (int)span.TotalHours;
+            int minutes = span.Minutes;
+            return $"{hours}h {minutes}m";
         }
 
         private void SyncHeaderActiveBaseFromSummary()
         {
-            _headerActiveBase = ComputeHeaderTimerTotalForDate(DateTime.Today);
+            var (trackedActive, manual) = ComputeHeaderTimerBaseComponents(DateTime.Today);
+            _headerActiveBase = trackedActive + manual;
+            _headerManualBase = manual;
+            RefreshHeaderLeaveCreditToday();
             _headerActiveStartLocal = null;
             _headerActiveLastRecordStartLocal = null;
             _lastDisplayedActiveSecond = -1;
             RefreshHeaderActiveTimer();
+        }
+
+        // Caches today's leave credit for the "Today Total" quick-menu figure — read once
+        // here (day sync/reset) and again from RefreshLeaveSurfacesForDate when today's own
+        // leave entry changes, rather than on every RefreshHeaderActiveTimer tick (leave
+        // entries are discrete/infrequent edits, not something that needs a per-second
+        // disk read).
+        private void RefreshHeaderLeaveCreditToday()
+        {
+            var today = DateTime.Today;
+            var leaveEntry = _leaveService.GetForDate(today);
+            _headerLeaveCreditToday = ExpectedHoursCalculator.GetDayLeaveCredit(today, leaveEntry?.Duration);
         }
 
         // Top header running timer's base = tracked active time + Offline Work/Manual time
@@ -926,7 +1080,9 @@ namespace SystemActivityTracker.ViewModels
         // activity. The live per-second delta added on top in RefreshHeaderActiveTimer is
         // still tracked-active-only (there's no "currently running" manual timer to tick),
         // but the base it starts from now correctly folds in already-logged manual entries.
-        private TimeSpan ComputeHeaderTimerTotalForDate(DateTime date)
+        // Returns the two components separately (not just their sum) so callers can track
+        // _headerManualBase alongside _headerActiveBase — see that field's comment.
+        private (TimeSpan TrackedActive, TimeSpan Manual) ComputeHeaderTimerBaseComponents(DateTime date)
         {
             var trackedActive = _activityLogReader.TryReadDay(date.Date, out var entries)
                 ? HoursCalculationHelper.SumActiveOnly(entries)
@@ -934,7 +1090,7 @@ namespace SystemActivityTracker.ViewModels
 
             var manual = TimeSpan.FromSeconds(GetManualSecondsForDate(date.Date));
 
-            return trackedActive + manual;
+            return (trackedActive, manual);
         }
 
         public string TodayText { get; }
@@ -1634,6 +1790,18 @@ namespace SystemActivityTracker.ViewModels
         private void RefreshLeaveSurfacesForDate(DateTime date)
         {
             var normalized = date.Date;
+
+            if (normalized == DateTime.Today)
+            {
+                // Keeps the floating timer's/tray's "Today Total" quick-menu figure in sync
+                // the moment today's own leave entry is added/edited/deleted, rather than
+                // waiting for the next full day sync. RefreshHeaderActiveTimer normally
+                // skips its body when the displayed second hasn't changed — force past that
+                // guard since leave doesn't affect the ticking seconds, only Today Total.
+                RefreshHeaderLeaveCreditToday();
+                _lastDisplayedActiveSecond = -1;
+                RefreshHeaderActiveTimer();
+            }
 
             if (normalized == SelectedDate.Date)
             {
@@ -2559,6 +2727,42 @@ namespace SystemActivityTracker.ViewModels
                     OnPropertyChanged();
                     ApplyLiveRefreshSettings();
                 }
+            }
+        }
+
+        // Unlike most Settings-tab toggles above (which only take effect after "Save
+        // Settings" is clicked), this one applies and persists immediately: the floating
+        // timer can appear the very next time the window is minimized/closed to tray, well
+        // before the user might touch Save for anything else. Also toggled from the
+        // floating timer's own "Hide Floating Timer" quick action (FloatingTimerService),
+        // which is why the persist step re-reads from disk rather than reusing
+        // _settingsSnapshot — that snapshot only reflects the last explicit Save, not this
+        // property's own already-applied value.
+        public bool ShowFloatingTimerOnMinimize
+        {
+            get => _showFloatingTimerOnMinimize;
+            set
+            {
+                if (_showFloatingTimerOnMinimize != value)
+                {
+                    _showFloatingTimerOnMinimize = value;
+                    OnPropertyChanged();
+                    _settingsSnapshot.ShowFloatingTimerOnMinimize = value;
+                    PersistShowFloatingTimerOnMinimize(value);
+                }
+            }
+        }
+
+        private void PersistShowFloatingTimerOnMinimize(bool value)
+        {
+            try
+            {
+                var settings = _settingsService?.Load() ?? new AppSettings();
+                settings.ShowFloatingTimerOnMinimize = value;
+                _settingsService?.Save(settings);
+            }
+            catch
+            {
             }
         }
 
