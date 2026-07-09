@@ -153,7 +153,9 @@ namespace SystemActivityTracker.ViewModels
         // can't select a future date, on top of the clamp above.
         public DateTime MaxSelectableDate => DateTime.Today;
 
-        public string ExpectedHoursText => FormatHm(_expectedHours);
+        // Standard "Expected" hours format app-wide ("Xh Ym", or "Xh" when minutes is 0) —
+        // not FormatHm, which the other properties below (Active/Offline/Leave/etc.) keep.
+        public string ExpectedHoursText => _expectedHours.ToExpectedHoursText();
         public string ActiveHoursText => FormatHm(_activeHours);
         public string OfflineWorkText => FormatHm(_offlineWork);
         public string TotalActiveHoursText => FormatHm(_activeHours + _offlineWork);

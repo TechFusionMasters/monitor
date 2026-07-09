@@ -1,0 +1,78 @@
+<Window x:Class="SystemActivityTracker.Views.FloatingTimerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Operon"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        Focusable="False">
+    <Border Background="#E6111827" CornerRadius="16" Padding="14,8"
+            BorderBrush="#2563EB" BorderThickness="1"
+            MouseLeftButtonDown="Root_MouseLeftButtonDown"
+            ToolTip="Today's running time — drag to move, double-click to reopen Operon, right-click for quick actions">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.35" ShadowDepth="2" BlurRadius="10"/>
+        </Border.Effect>
+
+        <!-- Deliberately a plain, unstyled ContextMenu (no custom template/resources
+             merged in) so it renders in the OS's native menu chrome — the same
+             plain/native look as the tray icon's WinForms ContextMenuStrip, rather than
+             the app's own custom-styled buttons/menus used elsewhere. -->
+        <Border.ContextMenu>
+            <!-- Header uses explicit Run-pair TextBlocks, not Binding StringFormat — WPF's
+                 StringFormat isn't reliably applied when the binding target is an object-typed
+                 property like MenuItem.Header (only string-typed targets are guaranteed), which
+                 was silently dropping the "Today Total:"/"Active:"/etc. label prefixes and
+                 leaving just the bare value visible. Same Run-pair pattern already used
+                 successfully for the Month View week-summary pills. -->
+            <ContextMenu>
+                <MenuItem Header="Today" IsEnabled="False" FontWeight="Bold"/>
+                <MenuItem IsEnabled="False">
+                    <MenuItem.Header>
+                        <TextBlock FontWeight="SemiBold">
+                            <Run Text="Today Total: "/><Run Text="{Binding TodayQuickTotalText, Mode=OneWay}"/>
+                        </TextBlock>
+                    </MenuItem.Header>
+                </MenuItem>
+                <Separator/>
+                <MenuItem IsEnabled="False">
+                    <MenuItem.Header>
+                        <TextBlock>
+                            <Run Text="Active: "/><Run Text="{Binding TodayQuickActiveText, Mode=OneWay}"/>
+                        </TextBlock>
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem IsEnabled="False">
+                    <MenuItem.Header>
+                        <TextBlock>
+                            <Run Text="Offline Work: "/><Run Text="{Binding TodayQuickOfflineText, Mode=OneWay}"/>
+                        </TextBlock>
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem IsEnabled="False">
+                    <MenuItem.Header>
+                        <TextBlock>
+                            <Run Text="Status: "/><Run Text="{Binding TodayQuickStatusText, Mode=OneWay}"/>
+                        </TextBlock>
+                    </MenuItem.Header>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="Open Operon" Click="OpenMenuItem_Click"/>
+                <MenuItem Header="Hide Floating Timer" Click="HideMenuItem_Click"/>
+                <Separator/>
+                <MenuItem Header="Shutdown Operon" Click="ShutdownMenuItem_Click"/>
+            </ContextMenu>
+        </Border.ContextMenu>
+
+        <StackPanel Orientation="Horizontal">
+            <Ellipse Width="8" Height="8" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock Text="{Binding HeaderRunningTimerText}" Foreground="White" FontSize="15"
+                       FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</Window>

@@ -85,6 +85,7 @@ namespace SystemActivityTracker.Views
             RunRefreshCommand();
             ShowInTaskbar = false;
             Hide();
+            (System.Windows.Application.Current as App)?.FloatingTimerService?.Show();
         }
 
         private void RestoreFromTray()
@@ -102,6 +103,24 @@ namespace SystemActivityTracker.Views
             }
 
             Activate();
+            (System.Windows.Application.Current as App)?.FloatingTimerService?.Hide();
+        }
+
+        // Native minimize (taskbar button, not the tray-hiding X close) doesn't go through
+        // HideToTray/RestoreFromTray at all, so the floating timer needs its own hook here
+        // to show on minimize and hide on restore.
+        protected override void OnStateChanged(System.EventArgs e)
+        {
+            base.OnStateChanged(e);
+
+            if (WindowState == WindowState.Minimized)
+            {
+                (System.Windows.Application.Current as App)?.FloatingTimerService?.Show();
+            }
+            else if (IsVisible)
+            {
+                (System.Windows.Application.Current as App)?.FloatingTimerService?.Hide();
+            }
         }
 
         internal void RestoreFromTrayInternal()

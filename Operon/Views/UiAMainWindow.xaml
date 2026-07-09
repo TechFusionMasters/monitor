@@ -615,27 +615,59 @@
                                               VerticalAlignment="Center" HorizontalAlignment="Left">
                                     <Grid VerticalAlignment="Center">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/> <!-- 1: Expected Hours label + value -->
-                                            <ColumnDefinition Width="Auto"/> <!-- 2: Expected Hours donut -->
-                                            <ColumnDefinition Width="16"/>   <!-- 3: gap -->
-                                            <ColumnDefinition Width="Auto"/> <!-- 4: Total Active Hours label + value -->
-                                            <ColumnDefinition Width="Auto"/> <!-- 5: Total Active Hours legend -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 1: Monthly Hours label + value -->
+                                            <ColumnDefinition Width="16"/>   <!-- 2: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 3: Expected So Far label + value -->
+                                            <ColumnDefinition Width="16"/>   <!-- 4: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 5: Burnt Hours label + value -->
                                             <ColumnDefinition Width="16"/>   <!-- 6: gap -->
-                                            <ColumnDefinition Width="Auto"/> <!-- 7: Status label + value -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 7: donut -->
                                             <ColumnDefinition Width="16"/>   <!-- 8: gap -->
-                                            <ColumnDefinition Width="Auto"/> <!-- 9: GIF indicator -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 9: Burnt Hours legend -->
+                                            <ColumnDefinition Width="16"/>   <!-- 10: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 11: Status label + value -->
+                                            <ColumnDefinition Width="16"/>   <!-- 12: gap -->
+                                            <ColumnDefinition Width="Auto"/> <!-- 13: GIF indicator -->
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- 1: Expected Hours — expected-hours value only (no completed/active
-                                             hours here; that lives in the Total Active Hours and Status columns). -->
+                                        <!-- 1: Monthly Hours — the full selected month's working hours
+                                             (weekdays × 8h, minus holiday hours), independent of today's date. -->
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
-                                            <TextBlock Text="Expected Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Monthly Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding MonthlyHoursText}" FontSize="15" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- 2: gap (Grid.Column="1" is an empty spacer column) -->
+
+                                        <!-- 3: Expected So Far — month-to-date expected hours only (no
+                                             completed/active hours here; that lives in the Burnt Hours and
+                                             Status columns). Stops at today; see Monthly Hours (col 0) for the
+                                             full month's target regardless of date. -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Expected So Far" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
                                             <TextBlock Text="{Binding MonthlyExpectedText}" FontSize="15" FontWeight="Bold"
                                                        Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
 
-                                        <!-- 2: Expected Hours donut -->
-                                        <Grid Grid.Column="1" Width="58" Height="58" VerticalAlignment="Center">
+                                        <!-- 4: gap (Grid.Column="3" is an empty spacer column) -->
+
+                                        <!-- 5: Burnt Hours -->
+                                        <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="Burnt Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
+                                            <!-- MonthlyTotalActiveText = tracked + manual only (no leave credit), the
+                                                 same definition each week row's Burnt pill uses (SumBurntHoursForWeek)
+                                                 and the same value UiB's "Total Active" figure reads — summing every
+                                                 week's Burnt Hours for the month equals this value. -->
+                                            <TextBlock Text="{Binding MonthlyTotalActiveText}" FontSize="15" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- 6: gap (Grid.Column="5" is an empty spacer column) -->
+
+                                        <!-- 7: donut — still driven by MonthlyProgressPercent/MonthlyStatusKind
+                                             (Expected So Far's progress), only its position in the row moved. -->
+                                        <Grid Grid.Column="6" Width="58" Height="58" VerticalAlignment="Center">
                                             <controls:CircularProgressRing Progress="{Binding MonthlyProgressPercent}"
                                                                             RingThickness="5" TrackBrush="#E5E7EB">
                                                 <controls:CircularProgressRing.Style>
@@ -657,20 +689,11 @@
                                                        Foreground="{StaticResource TextPrimaryBrush}"/>
                                         </Grid>
 
-                                        <!-- 3: gap (Grid.Column="2" is an empty spacer column) -->
+                                        <!-- 8: gap (Grid.Column="7" is an empty spacer column) -->
 
-                                        <!-- 4: Total Active Hours -->
-                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0">
-                                            <TextBlock Text="Total Active Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
-                                            <!-- Total shown = Active + Offline + Leave (MonthlyTotalActiveText),
-                                                 matching the full sum of all three segments in the donut. -->
-                                            <TextBlock Text="{Binding MonthlyTotalActiveText}" FontSize="15" FontWeight="Bold"
-                                                       Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
-                                        </StackPanel>
-
-                                        <!-- 5: legend — compact color-chip rows; donut removed, legend now sits
+                                        <!-- 9: legend — compact color-chip rows; donut removed, legend now sits
                                              directly beside the Total Active Hours value. -->
-                                        <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0">
+                                        <StackPanel Grid.Column="8" VerticalAlignment="Center" Margin="0,0,8,0">
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                                                 <Border Width="7" Height="7" CornerRadius="2" Background="{StaticResource AccentBrush}" Margin="0,0,4,0"/>
                                                 <TextBlock Text="Active" Style="{StaticResource SecondaryTextStyle}" FontSize="9" Width="36"/>
@@ -693,10 +716,10 @@
                                             </StackPanel>
                                         </StackPanel>
 
-                                        <!-- 6: gap (Grid.Column="5" is an empty spacer column) -->
+                                        <!-- 10: gap (Grid.Column="9" is an empty spacer column) -->
 
-                                        <!-- 7: Status — exactly one of Remaining / Achieved / Overworked -->
-                                        <StackPanel Grid.Column="6" VerticalAlignment="Center">
+                                        <!-- 11: Status — exactly one of Remaining / Achieved / Overworked -->
+                                        <StackPanel Grid.Column="10" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding MonthlyStatusIcon}" FontSize="10" Margin="0,0,4,0" VerticalAlignment="Center">
                                                     <TextBlock.Style>
@@ -746,14 +769,14 @@
                                             </TextBlock>
                                         </StackPanel>
 
-                                        <!-- 8: gap (Grid.Column="7" is an empty spacer column) -->
+                                        <!-- 12: gap (Grid.Column="11" is an empty spacer column) -->
 
-                                        <!-- 9: overall monthly progress GIF — separate from, and does not touch,
+                                        <!-- 13: overall monthly progress GIF — separate from, and does not touch,
                                              the per-day tile GIF (MonthlyDayItem.ActiveHoursGifKey) below. Capped
                                              at 68px (barely taller than the Expected Hours donut) so it stays clearly
                                              visible without pulling the whole row taller. Self-hides under 90%
                                              progress via AnimatedGifImage's own GifKey handling. -->
-                                        <controls:AnimatedGifImage Grid.Column="8" GifKey="{Binding MonthlyProgressGifKey}"
+                                        <controls:AnimatedGifImage Grid.Column="12" GifKey="{Binding MonthlyProgressGifKey}"
                                                                     Width="68" Height="68"
                                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                     IsHitTestVisible="False"/>
@@ -821,34 +844,59 @@
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Leave indicator (modern chip, top-right) — regular day cells only.
-                                                         WeeklySummaryDayItem has no HasLeave/LeaveBadgeText properties, so a
-                                                         plain Visibility="{Binding HasLeave}" binding silently fails to resolve
-                                                         on summary cells and leaves this chip stuck at its default Visible
-                                                         state with empty text, rendering as a stray orange dot in every week's
-                                                         Summary column. The MultiDataTrigger below requires IsWeeklySummary=False
-                                                         explicitly, so summary cells stay Collapsed regardless of that. -->
-                                                    <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0"
-                                                            Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                                <Style.Triggers>
-                                                                    <MultiDataTrigger>
-                                                                        <MultiDataTrigger.Conditions>
-                                                                            <Condition Binding="{Binding IsWeeklySummary}" Value="False"/>
-                                                                            <Condition Binding="{Binding HasLeave}" Value="True"/>
-                                                                        </MultiDataTrigger.Conditions>
-                                                                        <Setter Property="Visibility" Value="Visible"/>
-                                                                    </MultiDataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <Border.Effect>
-                                                            <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
-                                                        </Border.Effect>
-                                                        <TextBlock Text="{Binding LeaveBadgeText}" Foreground="White" FontSize="9" FontWeight="Bold"/>
-                                                    </Border>
+                                                    <!-- Leave + Holiday indicators (modern chips, stacked top-right) —
+                                                         regular day cells only. WeeklySummaryDayItem has no
+                                                         HasLeave/IsHoliday properties, so a plain Visibility="{Binding
+                                                         HasLeave}"-style binding silently fails to resolve on summary
+                                                         cells and leaves a chip stuck at its default Visible state with
+                                                         empty text (this is exactly what caused the earlier "stray
+                                                         orange dot in the Summary column" bug). Each MultiDataTrigger
+                                                         below requires IsWeeklySummary=False explicitly, so summary
+                                                         cells stay Collapsed regardless. Stacked in one StackPanel so a
+                                                         day that's both a holiday and on leave shows both chips without
+                                                         overlapping. -->
+                                                    <StackPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0">
+                                                        <Border Background="#0EA5E9" CornerRadius="8" Padding="6,2" Margin="0,0,0,3">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition Binding="{Binding IsWeeklySummary}" Value="False"/>
+                                                                                <Condition Binding="{Binding IsHoliday}" Value="True"/>
+                                                                            </MultiDataTrigger.Conditions>
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </MultiDataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
+                                                            </Border.Effect>
+                                                            <TextBlock Text="Holiday" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                        </Border>
+                                                        <Border Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    <Style.Triggers>
+                                                                        <MultiDataTrigger>
+                                                                            <MultiDataTrigger.Conditions>
+                                                                                <Condition Binding="{Binding IsWeeklySummary}" Value="False"/>
+                                                                                <Condition Binding="{Binding HasLeave}" Value="True"/>
+                                                                            </MultiDataTrigger.Conditions>
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                        </MultiDataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
+                                                            </Border.Effect>
+                                                            <TextBlock Text="{Binding LeaveBadgeText}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                        </Border>
+                                                    </StackPanel>
 
                                                     <!-- Date Number (only for regular days) — filled accent circle marks today -->
                                                     <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0"
@@ -985,15 +1033,30 @@
 
                                                         <!-- Future dates: intentionally left empty (no chart, no text) -->
 
-                                                        <!-- Weekly summary -->
+                                                        <!-- Weekly summary: Burnt Hours (actual worked time, including
+                                                             work done on leave/holiday days) and Expected Hours (same
+                                                             holiday-excluded/leave-included rule as the month header),
+                                                             shown as two pill badges. Both pills share identical
+                                                             FontSize/FontWeight/Padding/CornerRadius/BorderThickness and
+                                                             spacing so they read as one consistent pair — only the
+                                                             accent color differs (green = burnt/success, matching the
+                                                             app's SuccessBrush elsewhere; blue = expected/target,
+                                                             matching AccentBrush) — no calculation logic touched here,
+                                                             purely display. -->
                                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                                                     Visibility="{Binding IsWeeklySummary, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                            <TextBlock Text="{Binding TotalActiveText}"
-                                                                       FontWeight="Bold"
-                                                                       FontSize="20"
-                                                                       Foreground="#10B981"
-                                                                       Style="{StaticResource SecondaryTextStyle}"
-                                                                       HorizontalAlignment="Center"/>
+                                                            <Border Background="#ECFDF5" BorderBrush="{StaticResource SuccessBrush}" BorderThickness="1.5"
+                                                                    CornerRadius="12" Padding="10,5" Margin="0,0,0,6" HorizontalAlignment="Center">
+                                                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}">
+                                                                    <Run Text="Burnt: "/><Run Text="{Binding BurntHoursText, Mode=OneWay}"/>
+                                                                </TextBlock>
+                                                            </Border>
+                                                            <Border Background="#EFF6FF" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5"
+                                                                    CornerRadius="12" Padding="10,5" HorizontalAlignment="Center">
+                                                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}">
+                                                                    <Run Text="Expected: "/><Run Text="{Binding ExpectedHoursText, Mode=OneWay}"/>
+                                                                </TextBlock>
+                                                            </Border>
                                                         </StackPanel>
                                                     </Grid>
                                                 </Grid>
@@ -2570,6 +2633,8 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         
                                         <TextBlock Text="Idle (min):" Style="{StaticResource BodyTextStyle}" 
@@ -2620,6 +2685,14 @@
                                         <Button Grid.Row="11" Grid.ColumnSpan="2" Content="Save Settings"
                                                 Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch"
                                                 Command="{Binding SaveSettingsCommand}"/>
+
+                                        <!-- Unlike everything above, this applies and persists immediately on
+                                             toggle — no need to click Save Settings. -->
+                                        <CheckBox Grid.Row="12" Grid.ColumnSpan="2" Content="Show floating mini timer when minimized to tray"
+                                                  Style="{StaticResource UIACheckBoxStyle}" Margin="0,12,0,6"
+                                                  IsChecked="{Binding ShowFloatingTimerOnMinimize, Mode=TwoWay}"/>
+                                        <TextBlock Grid.Row="13" Grid.ColumnSpan="2" Style="{StaticResource SecondaryTextStyle}"
+                                                   Text="Applies immediately — no need to click Save Settings."/>
                                     </Grid>
                                 </StackPanel>
                             </Border>

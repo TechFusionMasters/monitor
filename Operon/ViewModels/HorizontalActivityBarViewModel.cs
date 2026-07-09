@@ -100,7 +100,10 @@ namespace SystemActivityTracker.ViewModels
         public TimeSpan TotalActiveDuration => ActiveDuration + ManualDuration;
 
         /// <summary>
-        /// Total Active formatted for display in month view as HHh MMm (e.g., "06h 00m")
+        /// Total Active formatted for display in month view as HHh MMm (e.g., "06h 00m").
+        /// TEMP DIAGNOSTIC: seconds appended ("06h 00m 00s") to help pinpoint a reported
+        /// minute-level mismatch between Day/Week/Month/Week Report totals. Revert to
+        /// "{hours:D2}h {minutes:D2}m" once confirmed.
         /// </summary>
         public string TotalActiveText
         {
@@ -109,7 +112,8 @@ namespace SystemActivityTracker.ViewModels
                 var total = TotalActiveDuration;
                 var hours = (int)total.TotalHours;
                 var minutes = total.Minutes;
-                return $"{hours:D2}h {minutes:D2}m";
+                var seconds = total.Seconds;
+                return $"{hours:D2}h {minutes:D2}m {seconds:D2}s";
             }
         }
 
