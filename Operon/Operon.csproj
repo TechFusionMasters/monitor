@@ -9,6 +9,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Operon</AssemblyName>
     <RootNamespace>SystemActivityTracker</RootNamespace>
+    <!-- Embeds operon.ico as the exe's own Win32 icon resource — this is what Explorer,
+         desktop/Start Menu shortcuts, and (via TrayIconService.GetAppIcon's fallback)
+         extraction-from-exe all pick up. Window titlebar/taskbar/Alt+Tab icons still need
+         Window.Icon set explicitly in each window's XAML (WPF does not inherit this
+         automatically), and the tray icon is loaded directly from the embedded Resource
+         below rather than relying on this. -->
+    <ApplicationIcon>..\Assets\operon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +31,23 @@
       <Link>Assets\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <!-- App icon (operon.ico — every WPF window's titlebar/taskbar/Alt+Tab icon, and the
+       system tray icon, both load this via pack://application:,,,/Assets/operon.ico) and
+       in-UI logo (operon_logo.png — used only inside the application's own UI, never as a
+       window/taskbar/tray icon). Embedded as WPF Resources (compiled into the assembly)
+       rather than copied Content, so they're always available at runtime with no
+       dependency on the Assets folder existing next to the exe — unlike the GIFs above,
+       which are loaded lazily from disk by AnimatedGifImage and so still need the
+       CopyToOutputDirectory Content approach. -->
+  <ItemGroup>
+    <Resource Include="..\Assets\operon.ico">
+      <Link>Assets\operon.ico</Link>
+    </Resource>
+    <Resource Include="..\Assets\operon_logo.png">
+      <Link>Assets\operon_logo.png</Link>
+    </Resource>
   </ItemGroup>
 
 </Project>

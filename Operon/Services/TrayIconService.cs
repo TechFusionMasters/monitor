@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Forms;
 using SystemActivityTracker.Models;
@@ -88,17 +87,25 @@ namespace SystemActivityTracker.Services
             }
         }
 
+        // Loads operon.ico directly from the WPF Resource embedded in the assembly (see
+        // Operon.csproj's Resource ItemGroup) — the same source every Window.Icon in the
+        // app points to via pack://application:,,,/Assets/operon.ico, so the tray icon is
+        // guaranteed to be the identical image rather than depending on however the exe's
+        // own Win32 icon resource happens to extract (ApplicationIcon embeds the same file
+        // there too, but extraction from a running exe can behave inconsistently, e.g. with
+        // icon caching, across environments).
         private static System.Drawing.Icon GetAppIcon()
         {
             try
             {
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                if (!string.IsNullOrWhiteSpace(exePath))
+                var resourceInfo = System.Windows.Application.GetResourceStream(
+                    new Uri("pack://application:,,,/Assets/operon.ico", UriKind.Absolute));
+
+                if (resourceInfo?.Stream != null)
                 {
-                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
-                    if (icon != null)
+                    using (resourceInfo.Stream)
                     {
-                        return icon;
+                        return new System.Drawing.Icon(resourceInfo.Stream);
                     }
                 }
             }
