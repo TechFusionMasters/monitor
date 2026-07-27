@@ -166,6 +166,16 @@ namespace SystemActivityTracker.ViewModels
             _ => string.Empty
         };
 
+        // Label for the full-width top-strip leave indicator (more room than the old corner
+        // chip, so it spells out "HALF DAY" instead of the compact "½ AM"/"½ PM").
+        public string LeaveBadgeStripText => LeaveDuration switch
+        {
+            Models.LeaveDuration.FullDay => "● LEAVE",
+            Models.LeaveDuration.MorningHalf => "● HALF DAY · AM",
+            Models.LeaveDuration.AfternoonHalf => "● HALF DAY · PM",
+            _ => string.Empty
+        };
+
         public void ApplyLeaveData(LeaveDuration? duration, LeaveType? type)
         {
             LeaveDuration = duration;
@@ -175,6 +185,7 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(HasMorningHalfLeave));
             OnPropertyChanged(nameof(HasAfternoonHalfLeave));
             OnPropertyChanged(nameof(LeaveBadgeText));
+            OnPropertyChanged(nameof(LeaveBadgeStripText));
             OnPropertyChanged(nameof(ShowActivityBar));
         }
 
@@ -209,11 +220,14 @@ namespace SystemActivityTracker.ViewModels
     }
 
     // Weekly Summary Data Model for Calendar Grid — the "Summary" column cell shown once per
-    // week row. BurntHours = actual worked time (tracked + manual), including work done on
-    // leave/holiday days. ExpectedHours follows the same rule as the Monthly Usage summary
-    // (holiday hours excluded, leave hours NOT excluded) — see
-    // HoursCalculationHelper.SumBurntHoursForWeek / GetExpectedHoursForWeek, the single
-    // reusable source both this and the month-header figures are built from.
+    // week row. BurntHours = actual worked time (tracked + manual) plus that day's leave
+    // credit (8h full-day / 4h half-day, up to today), so a leave day still counts its
+    // credited hours and stacks with any hours actually worked that same day — except a
+    // public holiday date, which excludes the whole day (tracked, manual, and leave all
+    // zeroed), since a holiday is never an expected work day. ExpectedHours follows the same
+    // holiday-excluded rule — see HoursCalculationHelper.SumBurntHoursForWeek /
+    // GetExpectedHoursForWeek, the single reusable source both this and the month-header
+    // figures are built from.
     public class WeeklySummaryDayItem : CalendarDayItemBase, INotifyPropertyChanged
     {
         private int _weekNumber;
@@ -415,6 +429,7 @@ namespace SystemActivityTracker.ViewModels
         private TimeSpan _monthHolidayCredit = TimeSpan.Zero;
         private int _monthHolidayDayCount;
         private TimeSpan _monthFullHolidayCredit = TimeSpan.Zero;
+        private TimeSpan _monthHolidayWorkedCredit = TimeSpan.Zero;
         private DateTime? _runStartUtc;
         private TimeSpan _accumulatedRunTime = TimeSpan.Zero;
         private readonly DispatcherTimer _runningTimer = new DispatcherTimer();
@@ -1713,10 +1728,31 @@ namespace SystemActivityTracker.ViewModels
                 // _monthlyAppUsage snapshot from the last full LoadMonthlyUsage() — see
                 // RebuildMonthlyAppUsage's comment for the full explanation.
                 RebuildMonthlyAppUsage();
+                RecalculateMonthHolidayWorkedCredit();
                 NotifyMonthHeaderTotalsChanged();
             }
 
             NotifyManualTotalsChanged();
+
+            // Today's header/tray/floating-timer "Today Total" quick-info figures cache their
+            // own manual/offline base (_headerManualBase) rather than re-reading it every
+            // tick, so an offline-work edit for today needs to force that cache — and the
+            // per-second display guard in RefreshHeaderActiveTimer — past their normal
+            // once-per-tick gate. Same pattern already used for today's leave edits (see
+            // RefreshHeaderLeaveCreditToday's call site).
+            if (normalizedDates.Contains(DateTime.Today.Date))
+            {
+                SyncHeaderActiveBaseFromSummary();
+            }
+
+            // WorkSummaryViewModel (the Work Summary panel's Today/Week/Month/Custom view)
+            // owns its own cached Active/Offline/Expected fields, computed only on Refresh().
+            // Nothing else here touches it, so without this call an offline-work edit made
+            // through the Manual Tasks tab would leave that panel showing stale figures until
+            // the user manually changes its view mode or navigates — refresh it unconditionally
+            // here since it's a cheap, disk-backed recompute over its own (usually small) date
+            // range, not worth gating on whether the edited date falls inside it.
+            WorkSummary.Refresh();
         }
 
         private void RefreshMonthSurfacesForDate(DateTime date)
@@ -1729,6 +1765,7 @@ namespace SystemActivityTracker.ViewModels
             RefreshMonthDayCell(date);
             RefreshMonthWeekSummary(WorkWeekHelper.GetIsoWeekNumber(date));
             RebuildMonthlyAppUsage();
+            RecalculateMonthHolidayWorkedCredit();
             NotifyMonthHeaderTotalsChanged();
         }
 
@@ -1828,6 +1865,7 @@ namespace SystemActivityTracker.ViewModels
                         .OfType<MonthlyDayItem>()
                         .Where(d => d.IsCurrentMonth && d.Date.Date <= DateTime.Today.Date)
                         .Sum(d => d.LeaveCredit.TotalSeconds));
+                RecalculateMonthHolidayWorkedCredit();
                 NotifyMonthHeaderTotalsChanged();
             }
         }
@@ -1914,7 +1952,7 @@ namespace SystemActivityTracker.ViewModels
         {
             var monthDays = _monthlyCalendarDays.OfType<MonthlyDayItem>();
             var burntHours = HoursCalculationHelper.SumBurntHoursForWeek(
-                monthDays, weekNumber, _selectedYear, _selectedMonth);
+                monthDays, weekNumber, _selectedYear, _selectedMonth, DateTime.Today);
             var expectedHours = HoursCalculationHelper.GetExpectedHoursForWeek(
                 monthDays, weekNumber, _selectedYear, _selectedMonth, DateTime.Today);
 
@@ -1947,6 +1985,7 @@ namespace SystemActivityTracker.ViewModels
             OnPropertyChanged(nameof(SelectedDayStartText));
             OnPropertyChanged(nameof(SelectedDayEndText));
             OnPropertyChanged(nameof(SelectedDayActiveTrackedText));
+            OnPropertyChanged(nameof(SelectedDayManualTasksText));
             OnPropertyChanged(nameof(SelectedDayActiveText));
             OnPropertyChanged(nameof(SelectedDayTotalActiveText));
             OnPropertyChanged(nameof(SelectedDayStatusText));
@@ -2071,7 +2110,7 @@ namespace SystemActivityTracker.ViewModels
                 .ToDictionary(
                     w => w,
                     w => (
-                        Burnt: HoursCalculationHelper.SumBurntHoursForWeek(monthDaysForWeeklySummary, w, _selectedYear, _selectedMonth),
+                        Burnt: HoursCalculationHelper.SumBurntHoursForWeek(monthDaysForWeeklySummary, w, _selectedYear, _selectedMonth, DateTime.Today),
                         Expected: HoursCalculationHelper.GetExpectedHoursForWeek(monthDaysForWeeklySummary, w, _selectedYear, _selectedMonth, DateTime.Today)));
 
             // Create the final calendar grid with proper layout
@@ -2185,6 +2224,8 @@ namespace SystemActivityTracker.ViewModels
                 _monthHolidayDayCount++;
             }
 
+            RecalculateMonthHolidayWorkedCredit();
+
             // "Monthly Hours" (MonthlyHoursText) — the full selected month's working hours,
             // NOT month-to-date capped: unlike _monthHolidayCredit above (which stops at
             // today so Expected Hours only reflects days that have actually happened),
@@ -2272,6 +2313,23 @@ namespace SystemActivityTracker.ViewModels
             IsMonthlyUsageEmpty = _monthlyAppUsage.Count == 0;
         }
 
+        // Recomputes _monthHolidayWorkedCredit — the tracked/manual/leave hours that fell on
+        // a holiday date this month (month-to-date aware), which GetMonthlyProgressHours
+        // subtracts out. Reads straight from the live _monthlyCalendarDays tiles (already
+        // kept current by RefreshMonthDayCell) rather than caching a separate date scan, so
+        // it must be re-run any time those tiles' TotalActive/ManualTime change — every
+        // lighter-weight refresh path that already calls RebuildMonthlyAppUsage() calls this
+        // alongside it, the same way MonthlyActiveTrackedText/MonthlyTotalActiveText need
+        // RebuildMonthlyAppUsage() re-run to avoid reading a stale snapshot.
+        private void RecalculateMonthHolidayWorkedCredit()
+        {
+            var today = DateTime.Today;
+            _monthHolidayWorkedCredit = TimeSpan.FromTicks(_monthlyCalendarDays
+                .OfType<MonthlyDayItem>()
+                .Where(d => d.IsCurrentMonth && d.IsHoliday && d.Date.Date <= today)
+                .Sum(d => (d.TotalActive + d.ManualTime + d.LeaveCredit).Ticks));
+        }
+
         public string MonthlyActiveTrackedText
         {
             get
@@ -2296,6 +2354,20 @@ namespace SystemActivityTracker.ViewModels
         {
             var expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today) - _monthHolidayCredit;
             return expected < TimeSpan.Zero ? TimeSpan.Zero : expected;
+        }
+
+        // Total Active / progress hours for the Monthly Usage summary: tracked + manual +
+        // leave credit, minus _monthHolidayWorkedCredit (any tracked/manual/leave hours that
+        // fell on a holiday date) — a holiday is never an expected work day, so activity
+        // recorded on it doesn't count toward the month total, mirroring Expected Hours'
+        // own holiday exclusion (_monthHolidayCredit) and
+        // HoursCalculationHelper.SumBurntHoursForWeek's per-week rule. Single source shared
+        // by MonthlyTotalActiveText and every Status/Progress property below so they can
+        // never drift apart.
+        private TimeSpan GetMonthlyProgressHours(TimeSpan tracked, TimeSpan manual)
+        {
+            var progress = tracked + manual + _monthLeaveCredit - _monthHolidayWorkedCredit;
+            return progress < TimeSpan.Zero ? TimeSpan.Zero : progress;
         }
 
         // All "Expected" hours displays app-wide use ToExpectedHoursText() ("Xh Ym", or just
@@ -2336,20 +2408,18 @@ namespace SystemActivityTracker.ViewModels
         // a count is what explains the Expected Hours deduction above (_monthHolidayCredit).
         public string MonthlyHolidayCountText => _monthHolidayDayCount == 1 ? "1 day" : $"{_monthHolidayDayCount} days";
 
-        // TotalActive = tracked + manual only — deliberately excludes leave credit, matching
-        // HoursCalculationHelper.SumBurntHoursForWeek's definition exactly ("actual worked
-        // time, including work done on leave/holiday days"; leave credit isn't worked time,
-        // it's a credit, and is already shown separately as its own "Leave" legend chip /
-        // "Leave" figure). Shared by both UiA ("Burnt Hours" header) and UiB ("Total Active"
-        // figure) — same calculation, only the label/layout differs between the two UIs.
-        // Summing every week's BurntHoursText for the month equals this figure exactly.
+        // TotalActive = tracked + manual + leave credit, minus any hours that fell on a
+        // holiday date — see GetMonthlyProgressHours. Shared by both UiA ("Burnt Hours"
+        // header) and UiB ("Total Active" figure) — same calculation, only the label/layout
+        // differs between the two UIs. Summing every week's BurntHoursText for the month
+        // equals this figure exactly.
         public string MonthlyTotalActiveText
         {
             get
             {
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
-                return FormatTimeSpan(tracked + manual);
+                return FormatTimeSpan(GetMonthlyProgressHours(tracked, manual));
             }
         }
 
@@ -2362,16 +2432,16 @@ namespace SystemActivityTracker.ViewModels
                 var summary = new HoursCalculationHelper.PeriodHoursSummary
                 {
                     Expected = ExpectedHoursCalculator.GetMonthExpectedHours(_selectedYear, _selectedMonth, DateTime.Today),
-                    Active = tracked + manual,
-                    Leave = _monthLeaveCredit
+                    Active = GetMonthlyProgressHours(tracked, manual),
+                    Leave = TimeSpan.Zero
                 };
                 return summary.StatusText;
             }
         }
 
-        // Same Expected/Active(tracked+manual)/Leave comparison as MonthlyStatusText above —
-        // just surfaced as a key (for visual styling) and a label matching the Work Summary
-        // vocabulary, for the redesigned Monthly Usage summary card.
+        // Same Expected/Progress comparison as MonthlyStatusText above — just surfaced as a
+        // key (for visual styling) and a label matching the Work Summary vocabulary, for the
+        // redesigned Monthly Usage summary card.
         public string MonthlyStatusKind
         {
             get
@@ -2379,7 +2449,7 @@ namespace SystemActivityTracker.ViewModels
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 var expected = GetMonthlyExpectedHoursAdjusted();
-                var progress = tracked + manual + _monthLeaveCredit;
+                var progress = GetMonthlyProgressHours(tracked, manual);
 
                 if (progress < expected) return "RemainingWork";
                 if (progress > expected) return "ExtraWorked";
@@ -2420,7 +2490,7 @@ namespace SystemActivityTracker.ViewModels
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 var expected = GetMonthlyExpectedHoursAdjusted();
-                var progress = tracked + manual + _monthLeaveCredit;
+                var progress = GetMonthlyProgressHours(tracked, manual);
 
                 if (expected <= TimeSpan.Zero)
                 {
@@ -2450,7 +2520,7 @@ namespace SystemActivityTracker.ViewModels
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 var expected = GetMonthlyExpectedHoursAdjusted();
-                var progress = tracked + manual + _monthLeaveCredit;
+                var progress = GetMonthlyProgressHours(tracked, manual);
 
                 if (expected <= TimeSpan.Zero)
                 {
@@ -2491,7 +2561,7 @@ namespace SystemActivityTracker.ViewModels
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 var expected = GetMonthlyExpectedHoursAdjusted();
-                var progress = tracked + manual + _monthLeaveCredit;
+                var progress = GetMonthlyProgressHours(tracked, manual);
                 return $"{FormatHoursShort(progress)} / {FormatHoursShort(expected)}";
             }
         }
@@ -2513,7 +2583,7 @@ namespace SystemActivityTracker.ViewModels
                 var tracked = TimeSpan.FromSeconds(_monthlyAppUsage.Sum(x => Math.Max(0, x.TotalActive.TotalSeconds)));
                 var manual = TimeSpan.FromSeconds(GetManualSecondsForMonth(SelectedMonthDateTime));
                 var expected = GetMonthlyExpectedHoursAdjusted();
-                var progress = tracked + manual + _monthLeaveCredit;
+                var progress = GetMonthlyProgressHours(tracked, manual);
                 var diff = progress - expected;
 
                 return MonthlyStatusKind switch
@@ -2572,7 +2642,14 @@ namespace SystemActivityTracker.ViewModels
         private void RefreshSelectedDayManualDuration()
         {
             _selectedDayManualDuration = TimeSpan.FromSeconds(GetManualSecondsForDate(SelectedDate.Date));
-            UpdateActivityChart();
+            // NotifySelectedDaySummaryTextsChanged (not a bare UpdateActivityChart call) —
+            // otherwise SelectedDayManualTasksText/SelectedDayActiveText/
+            // SelectedDayTotalActiveText/SelectedDayStatusText (all plain computed
+            // properties with no backing-field setter to raise PropertyChanged on their own)
+            // silently keep showing stale offline-work figures after an edit: only the pie
+            // chart would redraw, while the adjacent "Offline"/"Total Active"/status labels
+            // sat frozen until the user navigated away and back.
+            NotifySelectedDaySummaryTextsChanged();
         }
 
         public DateTime ManualTasksDate
@@ -3076,7 +3153,7 @@ namespace SystemActivityTracker.ViewModels
 
         public string WeekLeaveHoursText => WeeklyLeaveDuration.ToHoursMinutes();
 
-        // TotalActive = tracked + manual (no leave) — see WeeklyTotalActiveDuration's comment.
+        // TotalActive = tracked + manual + leave credit — see WeeklyTotalActiveDuration's comment.
         public string WeekTotalActiveText => WeeklyTotalActiveDuration.ToHoursMinutes();
 
         public string WeekStatusText
@@ -3086,8 +3163,8 @@ namespace SystemActivityTracker.ViewModels
                 var summary = new HoursCalculationHelper.PeriodHoursSummary
                 {
                     Expected = _weekExpectedHours,
-                    Active = WeeklyTrackedActiveDuration + WeeklyManualDuration,
-                    Leave = WeeklyLeaveDuration
+                    Active = WeeklyTotalActiveDuration,
+                    Leave = TimeSpan.Zero
                 };
                 return summary.StatusText;
             }
@@ -3669,7 +3746,8 @@ namespace SystemActivityTracker.ViewModels
                 ManualTaskDuration = manual,
                 IdleDuration = idle,
                 LockedDuration = locked,
-                LeaveCredit = leaveCredit
+                LeaveCredit = leaveCredit,
+                IsHoliday = _holidayService.IsHoliday(date)
             };
         }
 
@@ -3699,7 +3777,7 @@ namespace SystemActivityTracker.ViewModels
             var manual = TimeSpan.FromSeconds(GetManualSecondsForDate(normalized));
             var leaveEntry = _leaveService.GetForDate(normalized);
             var leaveCredit = ExpectedHoursCalculator.GetDayLeaveCredit(normalized, leaveEntry?.Duration);
-            summary.SetDurations(active, manual, idle, locked, leaveCredit);
+            summary.SetDurations(active, manual, idle, locked, leaveCredit, _holidayService.IsHoliday(normalized));
         }
 
         private void RecalculateWeeklyTotals()
@@ -3707,14 +3785,21 @@ namespace SystemActivityTracker.ViewModels
             WeeklyTrackedActiveDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.ActiveDuration.Ticks));
             WeeklyManualDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.ManualTaskDuration.Ticks));
             WeeklyLeaveDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.LeaveCredit.Ticks));
-            // tracked + manual only — deliberately excludes leave credit, matching
-            // MonthlyTotalActiveText's definition (see that property's comment) so the Week
-            // Report panel's total agrees with Month View's weekly Burnt Hours pill and the
-            // Monthly Usage header for the same days. Leave is shown separately via
-            // WeeklyLeaveDuration/WeekLeaveHoursText. WeekStatusText computes its own
-            // Achieved/Remaining/Overworked progress independently (Active + Leave, same as
-            // Monthly's status logic) and is unaffected by this.
-            WeeklyTotalActiveDuration = WeeklyTrackedActiveDuration + WeeklyManualDuration;
+            // tracked + manual + leave credit, minus any hours that fell on a holiday date
+            // (_weekHolidayWorkedCredit) — matching MonthlyTotalActiveText's definition (see
+            // that property's comment) so the Week Report panel's total agrees with Month
+            // View's weekly Burnt Hours pill and the Monthly Usage header for the same days.
+            // A leave day contributes its credited hours (8h full-day / 4h half-day) even
+            // with no tracked activity, stacking with any hours actually worked that same
+            // day; a holiday day contributes nothing at all, since it's never an expected
+            // work day. Leave is still shown separately via WeeklyLeaveDuration/
+            // WeekLeaveHoursText. WeekStatusText reads this same total so the two can never
+            // drift apart.
+            var weekHolidayWorkedCredit = TimeSpan.FromTicks(_weeklySummaries
+                .Where(d => d.IsHoliday)
+                .Sum(d => (d.ActiveDuration + d.ManualTaskDuration + d.LeaveCredit).Ticks));
+            var weeklyTotalActive = WeeklyTrackedActiveDuration + WeeklyManualDuration + WeeklyLeaveDuration - weekHolidayWorkedCredit;
+            WeeklyTotalActiveDuration = weeklyTotalActive < TimeSpan.Zero ? TimeSpan.Zero : weeklyTotalActive;
             WeeklyTotalIdleDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.IdleDuration.Ticks));
             WeeklyTotalLockedDuration = TimeSpan.FromTicks(_weeklySummaries.Sum(d => d.LockedDuration.Ticks));
 

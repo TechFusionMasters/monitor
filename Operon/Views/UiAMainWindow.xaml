@@ -656,8 +656,8 @@
                                         <!-- 5: Burnt Hours -->
                                         <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,8,0">
                                             <TextBlock Text="Burnt Hours" Style="{StaticResource SecondaryTextStyle}" FontSize="9" FontWeight="SemiBold"/>
-                                            <!-- MonthlyTotalActiveText = tracked + manual only (no leave credit), the
-                                                 same definition each week row's Burnt pill uses (SumBurntHoursForWeek)
+                                            <!-- MonthlyTotalActiveText = tracked + manual + leave credit, the same
+                                                 definition each week row's Burnt pill uses (SumBurntHoursForWeek)
                                                  and the same value UiB's "Total Active" figure reads — summing every
                                                  week's Burnt Hours for the month equals this value. -->
                                             <TextBlock Text="{Binding MonthlyTotalActiveText}" FontSize="15" FontWeight="Bold"
@@ -842,22 +842,27 @@
                                                 <Grid Width="150" Height="150">
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="*"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <!-- Leave + Holiday indicators (modern chips, stacked top-right) —
-                                                         regular day cells only. WeeklySummaryDayItem has no
+                                                    <!-- Leave + Holiday indicators — full-width strips across the top of
+                                                         the tile, not small corner chips, so they stay clearly readable
+                                                         even once the calendar grid is scaled down to fit the window
+                                                         (the old small top-right pill shrank to near-illegible at typical
+                                                         grid sizes). Regular day cells only. WeeklySummaryDayItem has no
                                                          HasLeave/IsHoliday properties, so a plain Visibility="{Binding
                                                          HasLeave}"-style binding silently fails to resolve on summary
-                                                         cells and leaves a chip stuck at its default Visible state with
+                                                         cells and leaves a strip stuck at its default Visible state with
                                                          empty text (this is exactly what caused the earlier "stray
                                                          orange dot in the Summary column" bug). Each MultiDataTrigger
                                                          below requires IsWeeklySummary=False explicitly, so summary
-                                                         cells stay Collapsed regardless. Stacked in one StackPanel so a
-                                                         day that's both a holiday and on leave shows both chips without
+                                                         cells stay Collapsed regardless. Stacked in one StackPanel (Auto
+                                                         row, so it takes zero height when both are Collapsed) so a day
+                                                         that's both a holiday and on leave shows both strips without
                                                          overlapping. -->
-                                                    <StackPanel Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0">
-                                                        <Border Background="#0EA5E9" CornerRadius="8" Padding="6,2" Margin="0,0,0,3">
+                                                    <StackPanel Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                                                        <Border Background="#0EA5E9" Padding="0,4">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -873,11 +878,12 @@
                                                                 </Style>
                                                             </Border.Style>
                                                             <Border.Effect>
-                                                                <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
+                                                                <DropShadowEffect Color="#000000" Opacity="0.25" ShadowDepth="1" BlurRadius="3"/>
                                                             </Border.Effect>
-                                                            <TextBlock Text="Holiday" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                            <TextBlock Text="● HOLIDAY" Foreground="White" FontSize="12" FontWeight="Bold"
+                                                                       HorizontalAlignment="Center" TextAlignment="Center"/>
                                                         </Border>
-                                                        <Border Background="{StaticResource LeaveCalendarHighlightBorderBrush}" CornerRadius="8" Padding="6,2">
+                                                        <Border Background="{StaticResource LeaveCalendarHighlightBorderBrush}" Padding="0,4">
                                                             <Border.Style>
                                                                 <Style TargetType="Border">
                                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -893,14 +899,15 @@
                                                                 </Style>
                                                             </Border.Style>
                                                             <Border.Effect>
-                                                                <DropShadowEffect Color="#000000" Opacity="0.18" ShadowDepth="1" BlurRadius="3"/>
+                                                                <DropShadowEffect Color="#000000" Opacity="0.25" ShadowDepth="1" BlurRadius="3"/>
                                                             </Border.Effect>
-                                                            <TextBlock Text="{Binding LeaveBadgeText}" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                                            <TextBlock Text="{Binding LeaveBadgeStripText}" Foreground="White" FontSize="12" FontWeight="Bold"
+                                                                       HorizontalAlignment="Center" TextAlignment="Center"/>
                                                         </Border>
                                                     </StackPanel>
 
                                                     <!-- Date Number (only for regular days) — filled accent circle marks today -->
-                                                    <Border Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0"
+                                                    <Border Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,4,0,0"
                                                             Width="22" Height="22" CornerRadius="11"
                                                             Visibility="{Binding IsWeeklySummary, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                                                         <Border.Style>
@@ -930,15 +937,15 @@
                                                     </Border>
 
                                                     <!-- Week Number (only for summary cells) -->
-                                                    <TextBlock Grid.Row="0" Text="{Binding WeekNumber, StringFormat=W{0}}"
+                                                    <TextBlock Grid.Row="1" Text="{Binding WeekNumber, StringFormat=W{0}}"
                                                                FontWeight="Bold"
                                                                Margin="0,4,0,0"
                                                                HorizontalAlignment="Center"
                                                                Style="{StaticResource SecondaryTextStyle}"
                                                                Visibility="{Binding IsWeeklySummary, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                    
+
                                                     <!-- Horizontal Activity Bar / Future placeholder / Weekly Summary -->
-                                                    <Grid Grid.Row="1">
+                                                    <Grid Grid.Row="2">
                                                         <!-- Day content: Total Active text + Horizontal bar - centered vertically and horizontally -->
                                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                                                                     Visibility="{Binding DataContext.IsWeeklySummary, RelativeSource={RelativeSource AncestorType=Border}, Converter={StaticResource InverseBoolToVisibilityConverter}}">
@@ -1034,9 +1041,11 @@
 
                                                         <!-- Future dates: intentionally left empty (no chart, no text) -->
 
-                                                        <!-- Weekly summary: Burnt Hours (actual worked time, including
-                                                             work done on leave/holiday days) and Expected Hours (same
-                                                             holiday-excluded/leave-included rule as the month header),
+                                                        <!-- Weekly summary: Burnt Hours (actual worked time plus that
+                                                             day's leave credit, but a public holiday date excludes
+                                                             the whole day — same holiday-excluded rule Expected Hours
+                                                             already uses) and Expected Hours (same holiday-excluded
+                                                             rule as the month header),
                                                              shown as two pill badges. Both pills share identical
                                                              FontSize/FontWeight/Padding/CornerRadius/BorderThickness and
                                                              spacing so they read as one consistent pair — only the

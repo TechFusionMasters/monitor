@@ -12,6 +12,7 @@ namespace SystemActivityTracker.Models
         private TimeSpan _idleDuration;
         private TimeSpan _lockedDuration;
         private TimeSpan _leaveCredit;
+        private bool _isHoliday;
 
         public DateTime Date
         {
@@ -56,6 +57,21 @@ namespace SystemActivityTracker.Models
             set => SetDuration(ref _leaveCredit, value, nameof(LeaveCreditText));
         }
 
+        // Whether this date is a public holiday — a holiday day is excluded from
+        // weekly/monthly Total Active totals (see MainWindowViewModel's
+        // RecalculateWeeklyTotals), same rule HoursCalculationHelper.SumBurntHoursForWeek
+        // applies to the Month View calendar.
+        public bool IsHoliday
+        {
+            get => _isHoliday;
+            set
+            {
+                if (_isHoliday == value) return;
+                _isHoliday = value;
+                OnPropertyChanged();
+            }
+        }
+
         // Active = tracked + manual (all actual work, matching the PeriodHoursSummary model).
         public TimeSpan CombinedActiveDuration => ActiveDuration + ManualTaskDuration;
 
@@ -70,13 +86,14 @@ namespace SystemActivityTracker.Models
         public string LockedDurationText => LockedDuration.ToString(@"hh\:mm");
 
         public void SetDurations(TimeSpan active, TimeSpan manual, TimeSpan idle, TimeSpan locked,
-            TimeSpan leaveCredit = default)
+            TimeSpan leaveCredit = default, bool isHoliday = false)
         {
             ActiveDuration = active;
             ManualTaskDuration = manual;
             IdleDuration = idle;
             LockedDuration = locked;
             LeaveCredit = leaveCredit;
+            IsHoliday = isHoliday;
         }
 
         private void SetDuration(ref TimeSpan field, TimeSpan value, string textPropertyName)
