@@ -184,23 +184,33 @@ namespace SystemActivityTracker.Utilities
         /// Correctly excludes days from adjacent months when a week crosses a month boundary.
         /// </summary>
         // Burnt Hours for the Month View calendar's per-week Summary column: actual worked
-        // time (tracked + manual) for that week's in-month days — regardless of leave/holiday
-        // flags, since work done on a leave or holiday day still counts as burnt. Deliberately
-        // excludes LeaveCredit (unlike the old SumInMonthWeekTotalActive this replaces), since
-        // leave credit is time off, not time worked. Future days naturally contribute zero
-        // (no tracked data exists yet), so no separate month-to-date cutoff is needed here.
+        // time (tracked + manual) for that week's in-month days, PLUS that day's leave credit
+        // (full-day = 8h, half-day = 4h) — a leave day counts as its credited hours even with
+        // no tracked activity, and stacks on top of any hours actually worked that same day
+        // (e.g. 2h worked on a full-day leave date contributes 10h, not 2h or 8h). Leave
+        // credit is only counted for dates up to and including today, matching
+        // MonthlyTotalActiveText/_monthLeaveCredit's month-to-date cutoff, so a leave day
+        // planned later this month doesn't inflate this week's total before it happens —
+        // tracked/manual figures don't need the same guard since no tracked data exists yet
+        // for future days. A public holiday excludes the whole day from this sum (tracked,
+        // manual, and leave all zeroed) — a holiday is never an expected work day, so any
+        // activity recorded on it doesn't count toward the total, same exclusion Expected
+        // Hours already applies via GetDayHolidayCredit.
         public static TimeSpan SumBurntHoursForWeek(
             IEnumerable<MonthlyDayItemLike> days,
             int isoWeekNumber,
             int year,
-            int month)
+            int month,
+            DateTime today)
         {
             return TimeSpan.FromSeconds(days
                 .Where(d => d.IsCurrentMonth
                     && d.Date.Year == year
                     && d.Date.Month == month
                     && WorkWeekHelper.GetIsoWeekNumber(d.Date) == isoWeekNumber)
-                .Sum(d => Math.Max(0, (d.TrackedActive + d.Manual).TotalSeconds)));
+                .Sum(d => d.IsHoliday
+                    ? 0
+                    : Math.Max(0, (d.TrackedActive + d.Manual + (d.Date.Date <= today.Date ? d.LeaveCredit : TimeSpan.Zero)).TotalSeconds)));
         }
 
         // Expected Hours for the Month View calendar's per-week Summary column — same rule as

@@ -193,7 +193,10 @@ namespace SystemActivityTracker.ViewModels
             }
         }
 
-        private void Refresh()
+        // Public so MainWindowViewModel can force a recompute after offline-work (manual
+        // task) or leave edits made elsewhere in the app — this panel has no other way to
+        // learn its cached Active/Offline/Expected/Leave figures have gone stale.
+        public void Refresh()
         {
             var today = DateTime.Today;
             IEnumerable<DateTime> days = ViewMode switch
